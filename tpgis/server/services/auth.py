@@ -23,6 +23,26 @@ def mfa_requise(utilisateur: Utilisateur) -> bool:
     return est_privilegie(utilisateur.role.codes_permissions)
 
 
+def compter_echec(bd: SessionBD, p: ParametresServeur, utilisateur: Utilisateur, trace_id: str, ip: str | None) -> bool:
+    """Comptabilise un echec d'authentification (mot de passe, code MFA,
+    confirmation d'identite). Verrouille le compte au seuil et retourne True."""
+    utilisateur.echecs_connexion += 1
+    if utilisateur.echecs_connexion < p.connexion_max_echecs:
+        return False
+    utilisateur.verrouille_jusqua = maintenant() + timedelta(minutes=p.connexion_verrou_minutes)
+    utilisateur.echecs_connexion = 0
+    revoquer_sessions(bd, utilisateur.id, "verrouillage_echecs_repetes")
+    audit.enregistrer(
+        bd,
+        action="VERROUILLAGE_COMPTE",
+        trace_id=trace_id,
+        utilisateur_id=utilisateur.id,
+        identifiant=utilisateur.identifiant,
+        adresse_ip=ip,
+    )
+    return True
+
+
 def _ouvrir_session(
     bd: SessionBD, p: ParametresServeur, utilisateur: Utilisateur, type_session: TypeSession, ip, agent
 ) -> tuple[str, Session]:
@@ -89,19 +109,7 @@ def connecter(
             "COMPTE_VERROUILLE",
         )
     if not passwords.verifier(utilisateur.mot_de_passe_hash, mot_de_passe):
-        utilisateur.echecs_connexion += 1
-        if utilisateur.echecs_connexion >= p.connexion_max_echecs:
-            utilisateur.verrouille_jusqua = instant + timedelta(minutes=p.connexion_verrou_minutes)
-            utilisateur.echecs_connexion = 0
-            audit.enregistrer(
-                bd,
-                action="VERROUILLAGE_COMPTE",
-                resultat=ResultatAudit.SUCCES,
-                trace_id=trace_id,
-                utilisateur_id=utilisateur.id,
-                identifiant=identifiant,
-                adresse_ip=ip,
-            )
+        compter_echec(bd, p, utilisateur, trace_id, ip)
         refuser("mot_de_passe_incorrect")
     if not utilisateur.actif:
         refuser("compte_desactive", "Ce compte est désactivé. Contactez l'administration.", "COMPTE_DESACTIVE")
@@ -113,7 +121,7 @@ def connecter(
             raise NonAuthentifie("Code de vérification à usage unique requis.", code="MFA_REQUISE")
         pas = mfa.verifier_code(utilisateur.mfa_secret or "", code_mfa, utilisateur.mfa_dernier_pas)
         if pas is None:
-            utilisateur.echecs_connexion += 1
+            compter_echec(bd, p, utilisateur, trace_id, ip)
             refuser("code_mfa_invalide", "Code de vérification invalide.", "MFA_INVALIDE")
         utilisateur.mfa_dernier_pas = pas
 
@@ -192,7 +200,10 @@ def changer_mot_de_passe(bd: SessionBD, p: ParametresServeur, ctx, ancien: str, 
     utilisateur: Utilisateur = ctx.utilisateur
     if not passwords.verifier(utilisateur.mot_de_passe_hash, ancien):
         audit.enregistrer_ctx(bd, ctx, "CHANGEMENT_MOT_DE_PASSE", resultat=ResultatAudit.REFUS)
+        verrouille = compter_echec(bd, p, utilisateur, ctx.trace_id, ctx.adresse_ip)
         bd.commit()
+        if verrouille:
+            raise NonAuthentifie("Compte verrouillé suite à plusieurs échecs.", code="COMPTE_VERROUILLE")
         raise AccesRefuse("Mot de passe actuel incorrect.")
     erreurs = passwords.controler_politique(nouveau, p.mot_de_passe_longueur_min, utilisateur.identifiant)
     if ancien == nouveau:
@@ -233,7 +244,7 @@ def activer_mfa(bd: SessionBD, ctx, code: str) -> dict:
     return {"message": "Authentification multifacteur activée. Veuillez vous reconnecter."}
 
 
-def reauthentifier(bd: SessionBD, ctx, mot_de_passe: str, code_mfa: str | None) -> dict:
+def reauthentifier(bd: SessionBD, p: ParametresServeur, ctx, mot_de_passe: str, code_mfa: str | None) -> dict:
     """Confirmation d'identite exigee avant les operations critiques."""
     utilisateur: Utilisateur = ctx.utilisateur
     ok = passwords.verifier(utilisateur.mot_de_passe_hash, mot_de_passe)
@@ -244,8 +255,14 @@ def reauthentifier(bd: SessionBD, ctx, mot_de_passe: str, code_mfa: str | None) 
             utilisateur.mfa_dernier_pas = pas
     if not ok:
         audit.enregistrer_ctx(bd, ctx, "REAUTHENTIFICATION", resultat=ResultatAudit.REFUS)
+        verrouille = compter_echec(bd, p, utilisateur, ctx.trace_id, ctx.adresse_ip)
         bd.commit()
+        if verrouille:
+            raise NonAuthentifie(
+                "Compte verrouillé suite à plusieurs échecs : session fermée.", code="COMPTE_VERROUILLE"
+            )
         raise AccesRefuse("Confirmation d'identité refusée.", code="REAUTHENTIFICATION_REFUSEE")
+    utilisateur.echecs_connexion = 0
     ctx.session.reauthentifiee_le = maintenant()
     audit.enregistrer_ctx(bd, ctx, "REAUTHENTIFICATION")
     return {"message": "Identité confirmée."}

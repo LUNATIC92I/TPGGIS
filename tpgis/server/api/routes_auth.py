@@ -88,6 +88,9 @@ def activer_mfa(donnees: schemas.CodeMFA, ctx: Contexte = Depends(contexte_mfa),
 
 @routeur.post("/reauthentification")
 def reauthentifier(
-    donnees: schemas.Reauthentification, ctx: Contexte = Depends(contexte_partiel), bd: SessionBD = Depends(base)
+    donnees: schemas.Reauthentification,
+    ctx: Contexte = Depends(contexte_partiel),
+    bd: SessionBD = Depends(base),
+    p: ParametresServeur = Depends(parametres),
 ):
-    return valider(bd, auth.reauthentifier(bd, ctx, donnees.mot_de_passe, donnees.code_mfa))
+    return valider(bd, auth.reauthentifier(bd, p, ctx, donnees.mot_de_passe, donnees.code_mfa))

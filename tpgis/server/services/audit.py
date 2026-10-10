@@ -133,6 +133,11 @@ def enregistrer_ctx(bd: SessionBD, ctx, action: str, **kwargs) -> EvenementAudit
     )
 
 
+def derniere_empreinte(bd: SessionBD) -> str:
+    derniere = bd.execute(select(EvenementAudit.empreinte).order_by(EvenementAudit.id.desc()).limit(1)).scalar()
+    return derniere or EMPREINTE_INITIALE
+
+
 def verifier_chaine(bd: SessionBD, taille_lot: int = 5000) -> dict:
     """Recalcule toute la chaine et signale la premiere rupture eventuelle."""
     precedente = EMPREINTE_INITIALE

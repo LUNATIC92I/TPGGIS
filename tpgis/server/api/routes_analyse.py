@@ -123,7 +123,7 @@ def lancer_sauvegarde(
     exiger_reauthentification_recente(ctx, p)
     from tpgis.server.database.initialisation import revision_courante
 
-    dossier = sauvegarde.sauvegarder(p, revision_courante(bd))
+    dossier = sauvegarde.sauvegarder(p, revision_courante(bd), audit.derniere_empreinte(bd))
     audit.enregistrer_ctx(bd, ctx, "SAUVEGARDE", type_ressource="systeme", details={"dossier": dossier.name})
     return valider(bd, {"sauvegarde": dossier.name})
 

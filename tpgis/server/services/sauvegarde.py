@@ -133,7 +133,7 @@ def _sceller(cle: bytes, manifeste: bytes) -> str:
     return hmac.new(cle, manifeste, hashlib.sha256).hexdigest()
 
 
-def sauvegarder(p: ParametresServeur, revision_schema: str | None = None) -> Path:
+def sauvegarder(p: ParametresServeur, revision_schema: str | None = None, empreinte_audit: str | None = None) -> Path:
     cle = _cle(p)
     horodatage = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     dossier = p.repertoire_sauvegardes / f"tpgis_sauvegarde_{horodatage}"
@@ -175,6 +175,8 @@ def sauvegarder(p: ParametresServeur, revision_schema: str | None = None) -> Pat
         "cree_le": horodatage,
         "format_base": format_base,
         "revision_schema": revision_schema,
+        # Ancrage externe de la chaine d'audit : a comparer lors des controles.
+        "empreinte_dernier_evenement_audit": empreinte_audit,
         "fichiers": {
             "base.enc": {"sha256_clair": sha_base, "sha256_chiffre": _sha256_fichier(dossier / "base.enc")},
             "stockage.tar.enc": {

@@ -160,7 +160,8 @@ def cmd_sauvegarder(_args, p) -> None:
     fabrique = _preparer(p)
     with fabrique.transaction() as bd:
         revision = revision_courante(bd)
-    dossier = sauvegarde.sauvegarder(p, revision)
+        empreinte = audit.derniere_empreinte(bd)
+    dossier = sauvegarde.sauvegarder(p, revision, empreinte)
     with fabrique.transaction() as bd:
         audit.enregistrer(
             bd,

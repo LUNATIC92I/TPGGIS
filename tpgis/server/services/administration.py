@@ -275,6 +275,8 @@ def creer_utilisateur(bd: SessionBD, ctx: Contexte, p: ParametresServeur, donnee
     unite = bd.get(Unite, donnees.unite_id)
     if unite is None or not ctx.unite_accessible(unite.id):
         raise DonneesInvalides("Unité inconnue ou hors de votre périmètre.")
+    if (donnees.portee or role.portee_defaut) == Portee.NATIONALE and ctx.portee != Portee.NATIONALE:
+        raise AccesRefuse("Vous ne pouvez pas attribuer un périmètre plus large que le vôtre.")
     erreurs = passwords.controler_politique(
         donnees.mot_de_passe_initial, p.mot_de_passe_longueur_min, donnees.identifiant
     )

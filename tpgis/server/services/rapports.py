@@ -267,6 +267,14 @@ def rapport_statistique_pdf(
     return f"{numero}.pdf", contenu
 
 
+def _cellule_sure(valeur) -> str:
+    """Neutralise l'injection de formules dans les tableurs (=, +, -, @, tabulation)."""
+    texte = str(valeur)
+    if texte and texte[0] in "=+-@\t\r" and not texte.lstrip("+-").replace(".", "", 1).isdigit():
+        return "'" + texte
+    return texte
+
+
 def export_statistiques_csv(
     bd: SessionBD,
     ctx: Contexte,
@@ -280,20 +288,24 @@ def export_statistiques_csv(
     exiger_reauthentification_recente(ctx, p)
     stats = statistiques.tableau_de_bord(bd, ctx, du, au, unite_id, categorie_id)
     tampon = io.StringIO()
-    w = csv.writer(tampon, delimiter=";")
-    w.writerow(["section", "libelle", "valeur"])
+    ecrivain = csv.writer(tampon, delimiter=";")
+
+    def ecrire(ligne: list) -> None:
+        ecrivain.writerow([_cellule_sure(c) for c in ligne])
+
+    ecrire(["section", "libelle", "valeur"])
     for k, v in stats["indicateurs"].items():
-        w.writerow(["indicateur", k, v])
+        ecrire(["indicateur", k, v])
     for c in stats["par_categorie"]:
-        w.writerow(["categorie", c["categorie"], c["nombre"]])
+        ecrire(["categorie", c["categorie"], c["nombre"]])
     for pr in stats["par_province"]:
-        w.writerow(["province", pr["province_code"] or "non renseignee", pr["nombre"]])
+        ecrire(["province", pr["province_code"] or "non renseignee", pr["nombre"]])
     for m in stats["evolution_mensuelle"]:
-        w.writerow(["mois", m["mois"], m["nombre"]])
+        ecrire(["mois", m["mois"], m["nombre"]])
     for u in stats["activite_unites"]:
-        w.writerow(["unite", u["unite"], u["plaintes"]])
+        ecrire(["unite", u["unite"], u["plaintes"]])
     for k, v in stats["qualite_donnees"].items():
-        w.writerow(["qualite", k, v])
+        ecrire(["qualite", k, v])
     numero = prochain_numero(bd, "EX", None)
     audit.enregistrer_ctx(
         bd,

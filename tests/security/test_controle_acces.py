@@ -241,3 +241,37 @@ def test_refus_journalises(client, connexions, app):
     h_aud = connexions.entetes("auditeur")
     evenements = client.get(f"{API}/audit", headers=h_aud, params={"action": "ACCES_REFUSE"}).json()["elements"]
     assert any(e["identifiant"] == "accueil.ndj" and e["details"]["chemin"] == "/api/v1/audit" for e in evenements)
+
+
+def test_perimetre_plus_large_que_le_sien_refuse_a_la_creation(client, connexions, app):
+    from tpgis.server.database.models import Utilisateur
+
+    with app.state.fabrique.transaction() as bd:
+        bd.query(Utilisateur).filter_by(identifiant="admin.fonctionnel").one().portee = "UNITE"
+    h = connexions.entetes("admin.fonctionnel")
+    roles = {r["code"]: r for r in client.get(f"{API}/roles", headers=h).json()}
+    moi = client.get(f"{API}/auth/moi", headers=h).json()
+    r = client.post(
+        f"{API}/utilisateurs",
+        headers=h,
+        json={
+            "identifiant": "test.national",
+            "nom": "TEST",
+            "prenoms": "National",
+            "unite_id": moi["unite_id"],
+            "role_id": roles["CONSULTATION"]["id"],
+            "portee": "NATIONALE",
+            "mot_de_passe_initial": "Initial-Mot2Passe!",
+        },
+    )
+    assert r.status_code == 403
+
+
+def test_cellules_csv_neutralisees():
+    from tpgis.server.services.rapports import _cellule_sure
+
+    assert _cellule_sure('=HYPERLINK("http://x")').startswith("'=")
+    assert _cellule_sure("@SUM(A1)") == "'@SUM(A1)"
+    assert _cellule_sure("-12.5") == "-12.5"
+    assert _cellule_sure(42) == "42"
+    assert _cellule_sure("Vol simple") == "Vol simple"

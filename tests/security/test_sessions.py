@@ -170,3 +170,32 @@ def test_secret_totp_chiffre_au_repos(app, donnees):
     with app.state.fabrique.transaction() as bd:
         brut = bd.execute(text("SELECT mfa_secret FROM utilisateurs WHERE identifiant='officier.ndj'")).scalar()
     assert brut and SECRETS_TOTP_DEMO["officier.ndj"] not in brut and brut.startswith("k1$")
+
+
+def test_codes_mfa_errones_verrouillent_le_compte(client, connexions, parametres):
+    for _ in range(parametres.connexion_max_echecs):
+        r = client.post(
+            f"{API}/auth/connexion",
+            json={"identifiant": "officier.abc", "mot_de_passe": MOT_DE_PASSE_DEMO, "code_mfa": "000000"},
+        )
+        assert r.status_code == 401
+    r = client.post(
+        f"{API}/auth/connexion",
+        json={
+            "identifiant": "officier.abc",
+            "mot_de_passe": MOT_DE_PASSE_DEMO,
+            "code_mfa": connexions.code("officier.abc"),
+        },
+    )
+    assert r.json()["code"] == "COMPTE_VERROUILLE"
+
+
+def test_reauthentification_par_force_brute_bloquee(client, connexions, parametres):
+    h = connexions.entetes("accueil.ndj")
+    for _ in range(parametres.connexion_max_echecs - 1):
+        r = client.post(f"{API}/auth/reauthentification", headers=h, json={"mot_de_passe": "devine"})
+        assert r.json()["code"] == "REAUTHENTIFICATION_REFUSEE"
+    r = client.post(f"{API}/auth/reauthentification", headers=h, json={"mot_de_passe": "devine"})
+    assert r.status_code == 401 and r.json()["code"] == "COMPTE_VERROUILLE"
+    # La session volee est revoquee et le compte verrouille.
+    assert client.get(f"{API}/auth/moi", headers=h).status_code == 401

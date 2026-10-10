@@ -1,0 +1,19 @@
+Donnees cartographiques embarquees dans TPGIS
+
+1. tchad_frontiere.geojson et tchad_provinces.geojson
+   Derives (simplification geometrique, renommage) de geoBoundaries gbOpen TCD
+   ADM0 et ADM1, eux memes issus d'OpenStreetMap.
+   (c) contributeurs OpenStreetMap ; geoBoundaries, William & Mary geoLab.
+   Ces fichiers derives sont mis a disposition sous la licence
+   Open Data Commons Open Database License (ODbL) 1.0 :
+   https://opendatacommons.org/licenses/odbl/1-0/
+   L'attribution est affichee sur la carte de l'application.
+
+2. tchad_villes.geojson
+   Derive de Natural Earth 10m populated places (domaine public).
+   https://www.naturalearthdata.com
+
+Ces limites sont indicatives et ne font pas foi. Elles doivent etre remplacees
+par les donnees officielles de l'administration territoriale tchadienne.
+Le detail des sources, des empreintes et des limites connues figure dans
+SOURCES.json.

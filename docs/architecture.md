@@ -92,7 +92,7 @@ Le contrôle combine des rôles (RBAC) et des attributs (ABAC) ; il est exécut�
 
 ## 6. Cartographie
 
-La carte est rendue nativement par Qt (QGraphicsView), sans QtWebEngine. Les données géographiques proviennent de Natural Earth (domaine public), simplifiées et embarquées (`tpgis/shared/geodata`, script de construction `scripts/construire_donnees_carte.py`, empreintes et limites dans `SOURCES.json`) : frontière nationale, 22 unités administratives (la source regroupe encore Ennedi Est et Ennedi Ouest), 19 villes. Mode hors ligne par défaut ; un fond raster facultatif (serveur de tuiles institutionnel ou dossier local) peut être configuré dans `client.ini`. La carte ne représente que l'implantation des unités et des agrégats par province.
+La carte est rendue nativement par Qt (QGraphicsView), sans QtWebEngine. Les données géographiques sont simplifiées et embarquées (`tpgis/shared/geodata`, script de construction `scripts/construire_donnees_carte.py`, sources, licences, empreintes et limites dans `SOURCES.json`) : frontière nationale et 23 provinces conformes au découpage de 2018 (codes ISO 3166-2:TD, dont Ennedi Est et Ennedi Ouest) issues de geoBoundaries (données OpenStreetMap, licence ODbL 1.0, attribution affichée sur la carte), et 19 villes issues de Natural Earth (domaine public). Le script sait revenir à Natural Earth seul (22 unités) si les fichiers geoBoundaries ne sont pas fournis. Mode hors ligne par défaut ; un fond raster facultatif (serveur de tuiles institutionnel ou dossier local) peut être configuré dans `client.ini`. La carte ne représente que l'implantation des unités et des agrégats par province.
 
 ## 7. Choix techniques et justifications
 

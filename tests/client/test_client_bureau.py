@@ -159,7 +159,8 @@ def test_tableau_de_bord_et_carte_alimentes(qapp, client, connexions, messages):
     qapp.processEvents()
     page = fenetre.pages.widget(0)
     assert page.indicateurs["plaintes_total"].valeur.text().isdigit()
-    assert len(page.carte.provinces) == 22
+    assert len(page.carte.provinces) == 23
+    assert {"TD-EE", "TD-EO"} <= set(page.carte.provinces)
     assert page.carte.marqueurs, "les unités doivent être placées sur la carte"
     nd = page.carte.provinces["TD-ND"]
     assert "Plaintes sur la période" in nd.toolTip()

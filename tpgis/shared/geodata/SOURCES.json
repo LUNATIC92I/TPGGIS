@@ -1,19 +1,29 @@
 {
-  "source": "Natural Earth 10m (admin 0, admin 1, populated places simple)",
-  "url": "https://www.naturalearthdata.com",
-  "depot": "https://github.com/nvkelso/natural-earth-vector",
-  "licence": "Domaine public (Natural Earth Terms of Use)",
+  "frontiere_et_provinces": {
+    "source": "geoBoundaries gbOpen TCD ADM0 et ADM1 (simplifiés)",
+    "url": "https://www.geoboundaries.org",
+    "origine_des_donnees": "OpenStreetMap, Wambacher",
+    "annee_representee": "2017",
+    "licence": "Open Data Commons Open Database License (ODbL) 1.0",
+    "attribution": "© contributeurs OpenStreetMap ; geoBoundaries (William & Mary geoLab)"
+  },
+  "villes": {
+    "source": "Natural Earth 10m populated places simple",
+    "url": "https://www.naturalearthdata.com",
+    "licence": "Domaine public"
+  },
   "construit_le": "2026-10-10",
   "tolerance_simplification_degres": 0.004,
   "limites_connues": [
-    "La source regroupe Ennedi-Est et Ennedi-Ouest en une seule unité (22 unités au lieu de 23).",
-    "Rattachement de Moundou corrigé manuellement (TD-LO) : point source en limite de province.",
+    "23 provinces conformes au découpage de 2018 (ISO 3166-2:TD), dont Ennedi Est et Ennedi Ouest.",
+    "Province de chaque ville calculée par inclusion géométrique dans les limites geoBoundaries.",
+    "Rattachement de Moundou corrigé manuellement (TD-LO, chef-lieu du Logone Occidental) : le point Natural Earth tombe en limite de province.",
     "Populations : estimations Natural Earth, à usage d'affichage uniquement.",
     "Les limites sont indicatives et ne font pas foi : à remplacer par les données officielles de l'administration territoriale tchadienne dès leur validation."
   ],
   "sha256": {
-    "tchad_frontiere.geojson": "69c17f157d88da542b80299c0ee73fafdae8ff020301999b40aa34336d88b4d6",
-    "tchad_provinces.geojson": "2678c7a9a080210a03908b5be86d5e512a06861a9435ada0cb93aa88a00e897d",
-    "tchad_villes.geojson": "a58a2339b4855b0b7fe3d88be33c0ac7dbb3179351cc487818c5d31c043a6ad2"
+    "tchad_frontiere.geojson": "bc957753e9ea85a0bd328b03b96984aeddb889c525108375a967b5e2b580512b",
+    "tchad_provinces.geojson": "4a81fcd4d95c41d7be9f0461fb0699c3bece0eca659cd026874662bcb3ffa76a",
+    "tchad_villes.geojson": "5a776283a77e851735bcf37ebc2bca3d3d20a96b91ad4b2f67a401a49509a598"
   }
 }

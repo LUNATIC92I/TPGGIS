@@ -52,7 +52,7 @@ Commande : `QT_QPA_PLATFORM=offscreen python -m pytest` (ajouter `TPGIS_TEST_DAT
 | Pagination et validation des entrées | `test_pagination`, `test_validation_entrees` |
 | Garde fous de production et séparation des environnements | `tests/unit/test_configuration.py` |
 | Interface : 13 modules chargés pour 5 rôles, sans erreur | `test_toutes_les_pages_se_chargent` |
-| Interface : carte alimentée (22 provinces, unités), indicateurs | `test_tableau_de_bord_et_carte_alimentes` |
+| Interface : carte alimentée (23 provinces dont Ennedi Est et Ennedi Ouest, unités), indicateurs | `test_tableau_de_bord_et_carte_alimentes` |
 | Interface : erreurs serveur affichées dans le formulaire | `test_formulaire_affiche_erreur_serveur` |
 
 ## 4. Vérifications manuelles réalisées

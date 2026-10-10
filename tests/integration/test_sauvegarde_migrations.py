@@ -99,7 +99,12 @@ def test_migration_montee_et_descente(tmp_path):
     tables = set(inspect(moteur).get_table_names())
     assert {"plaintes", "personnes", "journal_audit", "captures_biometriques", "alembic_version"} <= tables
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0001"
+        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0002"
+        if c.dialect.name == "postgresql":
+            index = c.execute(
+                text("SELECT indexdef FROM pg_indexes WHERE indexname = 'ix_personnes_nom_normalise_motif'")
+            )
+            assert "varchar_pattern_ops" in index.scalar()
     cfg = configuration_alembic(url)
     with moteur.begin() as connexion:
         cfg.attributes["connection"] = connexion

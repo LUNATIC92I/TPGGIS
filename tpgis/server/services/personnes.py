@@ -7,6 +7,7 @@ from difflib import SequenceMatcher
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session as SessionBD
+from sqlalchemy.orm import joinedload, load_only
 
 from tpgis.server.database.models import (
     CaptureBiometrique,
@@ -18,6 +19,7 @@ from tpgis.server.database.models import (
     LienPlaintePersonne,
     Personne,
     Plainte,
+    Unite,
 )
 from tpgis.server.security.crypto import index_aveugle, normaliser_texte
 from tpgis.server.services import audit
@@ -128,6 +130,24 @@ def serialiser_resume(p: Personne) -> dict:
     }
 
 
+COLONNES_CORRESPONDANCE = (
+    Personne.id,
+    Personne.numero_interne,
+    Personne.nom,
+    Personne.prenoms,
+    Personne.nom_normalise,
+    Personne.date_naissance,
+    Personne.lieu_naissance,
+    Personne.nationalite,
+    Personne.sexe,
+    Personne.statut_verification,
+    Personne.statut,
+    Personne.version,
+    Personne.index_document,
+    Personne.unite_creation_id,
+)
+
+
 def rechercher_candidats(
     bd: SessionBD,
     ctx: Contexte,
@@ -151,8 +171,11 @@ def rechercher_candidats(
         conditions.append(Personne.index_document == idx)
     if not conditions:
         return []
+    # Seules les colonnes utiles au calcul sont chargees : les champs chiffres
+    # (coordonnees, numero de document) ne sont ni lus ni dechiffres.
     requete = (
         select(Personne)
+        .options(load_only(*COLONNES_CORRESPONDANCE), joinedload(Personne.unite_creation).load_only(Unite.nom))
         .where(
             or_(*conditions),
             Personne.statut == StatutPersonne.ACTIVE,

@@ -1,7 +1,8 @@
 """Carte interactive du Tchad (rendu vectoriel natif Qt, sans navigateur).
 
-Mode hors ligne (par defaut) : frontiere, provinces et villes issues des
-fichiers GeoJSON Natural Earth embarques (domaine public).
+Mode hors ligne (par defaut) : frontiere et 23 provinces issues de geoBoundaries
+(donnees OpenStreetMap, licence ODbL) et villes Natural Earth (domaine public),
+embarquees en GeoJSON.
 Mode connecte ou tuiles locales (facultatif) : fond de carte raster XYZ dont
 l'adresse est fournie par la configuration ; a n'activer qu'avec un
 fournisseur dont la licence et les regles de securite ont ete validees.
@@ -222,7 +223,11 @@ class CarteTchad(QGraphicsView):
             "background: rgba(255,255,255,0.92); border: 1px solid #DDE2EA; "
             "border-radius: 4px; padding: 6px; font-size: 8pt;"
         )
-        self.source = QLabel("Fond : Natural Earth (domaine public). Limites indicatives.", self)
+        self.source = QLabel(
+            "Limites : © contributeurs OpenStreetMap, geoBoundaries (ODbL). Villes : Natural Earth. "
+            "Limites indicatives.",
+            self,
+        )
         self.source.setStyleSheet("background: rgba(255,255,255,0.8); font-size: 7pt; color: #5A6472; padding: 2px;")
         self._maj_legende([])
 

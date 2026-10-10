@@ -16,11 +16,23 @@ routeur = APIRouter(prefix="/auth", tags=["Authentification"])
 
 
 @routeur.post("/connexion")
-def connexion(donnees: schemas.DemandeConnexion, request: Request, bd: SessionBD = Depends(base),
-              p: ParametresServeur = Depends(parametres)):
+def connexion(
+    donnees: schemas.DemandeConnexion,
+    request: Request,
+    bd: SessionBD = Depends(base),
+    p: ParametresServeur = Depends(parametres),
+):
     request.app.state.limiteur.verifier(f"connexion:{adresse_client(request)}", p.limite_connexion_par_minute_ip)
-    resultat = auth.connecter(bd, p, donnees.identifiant, donnees.mot_de_passe, donnees.code_mfa,
-                              adresse_client(request), request.headers.get("user-agent"), request.state.trace_id)
+    resultat = auth.connecter(
+        bd,
+        p,
+        donnees.identifiant,
+        donnees.mot_de_passe,
+        donnees.code_mfa,
+        adresse_client(request),
+        request.headers.get("user-agent"),
+        request.state.trace_id,
+    )
     return valider(bd, resultat)
 
 
@@ -55,10 +67,13 @@ def moi(ctx: Contexte = Depends(contexte_partiel)):
 
 
 @routeur.post("/mot-de-passe")
-def changer_mot_de_passe(donnees: schemas.ChangementMotDePasse, ctx: Contexte = Depends(contexte_partiel),
-                         bd: SessionBD = Depends(base), p: ParametresServeur = Depends(parametres)):
-    return valider(bd, auth.changer_mot_de_passe(bd, p, ctx, donnees.ancien_mot_de_passe,
-                                                 donnees.nouveau_mot_de_passe))
+def changer_mot_de_passe(
+    donnees: schemas.ChangementMotDePasse,
+    ctx: Contexte = Depends(contexte_partiel),
+    bd: SessionBD = Depends(base),
+    p: ParametresServeur = Depends(parametres),
+):
+    return valider(bd, auth.changer_mot_de_passe(bd, p, ctx, donnees.ancien_mot_de_passe, donnees.nouveau_mot_de_passe))
 
 
 @routeur.post("/mfa/preparation")
@@ -72,6 +87,7 @@ def activer_mfa(donnees: schemas.CodeMFA, ctx: Contexte = Depends(contexte_mfa),
 
 
 @routeur.post("/reauthentification")
-def reauthentifier(donnees: schemas.Reauthentification, ctx: Contexte = Depends(contexte_partiel),
-                   bd: SessionBD = Depends(base)):
+def reauthentifier(
+    donnees: schemas.Reauthentification, ctx: Contexte = Depends(contexte_partiel), bd: SessionBD = Depends(base)
+):
     return valider(bd, auth.reauthentifier(bd, ctx, donnees.mot_de_passe, donnees.code_mfa))

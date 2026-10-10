@@ -22,7 +22,7 @@ from tpgis.server.database.models import (
 )
 from tpgis.server.services import audit
 from tpgis.server.services.commun import appliquer_modifications, historique, historiser, paginer, prochain_numero
-from tpgis.server.services.contexte import Contexte, filtre_dossiers, filtre_plaintes, filtre_personnes
+from tpgis.server.services.contexte import Contexte, filtre_dossiers, filtre_personnes, filtre_plaintes
 from tpgis.server.services.erreurs import HORS_PERIMETRE, AccesRefuse, Conflit, DonneesInvalides, Introuvable
 from tpgis.shared import schemas
 from tpgis.shared.enums import TRANSITIONS_PLAINTE, StatutPersonne, StatutPlainte
@@ -45,7 +45,8 @@ def serialiser_resume(p: Plainte) -> dict:
         "agent_responsable_id": p.agent_responsable_id,
         "agent_responsable": (
             f"{p.agent_responsable.grade or ''} {p.agent_responsable.nom} {p.agent_responsable.prenoms}".strip()
-            if p.agent_responsable else None
+            if p.agent_responsable
+            else None
         ),
         "version": p.version,
     }
@@ -60,9 +61,19 @@ def obtenir(bd: SessionBD, ctx: Contexte, plainte_id: str, action: str = "PLAINT
     return p
 
 
-def lister(bd: SessionBD, ctx: Contexte, *, statut: str | None = None, unite_id: str | None = None,
-           categorie_id: str | None = None, du: date | None = None, au: date | None = None,
-           numero: str | None = None, page: int = 1, taille: int = 50) -> dict:
+def lister(
+    bd: SessionBD,
+    ctx: Contexte,
+    *,
+    statut: str | None = None,
+    unite_id: str | None = None,
+    categorie_id: str | None = None,
+    du: date | None = None,
+    au: date | None = None,
+    numero: str | None = None,
+    page: int = 1,
+    taille: int = 50,
+) -> dict:
     ctx.exiger(Permission.PLAINTE_LIRE)
     requete = select(Plainte).where(filtre_plaintes(ctx))
     if statut:
@@ -99,9 +110,11 @@ def _verifier_categorie(bd: SessionBD, categorie_id: str | None) -> None:
 
 
 def _personne_accessible(bd: SessionBD, ctx: Contexte, personne_id: str) -> Personne:
-    p = bd.execute(
-        select(Personne).where(Personne.id == personne_id, filtre_personnes(ctx, recherche_nationale=True))
-    ).unique().scalar_one_or_none()
+    p = (
+        bd.execute(select(Personne).where(Personne.id == personne_id, filtre_personnes(ctx, recherche_nationale=True)))
+        .unique()
+        .scalar_one_or_none()
+    )
     if p is None:
         raise DonneesInvalides("Personne inconnue ou hors périmètre.")
     if p.statut != StatutPersonne.ACTIVE:
@@ -143,11 +156,21 @@ def creer(bd: SessionBD, ctx: Contexte, donnees: schemas.PlainteCreation) -> dic
     bd.flush()
     for lien in donnees.personnes:
         _personne_accessible(bd, ctx, lien.personne_id)
-        bd.add(LienPlaintePersonne(plainte_id=plainte.id, personne_id=lien.personne_id, role=lien.role,
-                                   observations=lien.observations))
+        bd.add(
+            LienPlaintePersonne(
+                plainte_id=plainte.id, personne_id=lien.personne_id, role=lien.role, observations=lien.observations
+            )
+        )
     historiser(bd, ctx, "plainte", plainte.id, "CREATION", {"numero": plainte.numero, "statut": plainte.statut})
-    audit.enregistrer_ctx(bd, ctx, "PLAINTE_CREATION", type_ressource="plainte", ressource_id=plainte.id,
-                          unite_id=unite_id, details={"numero": plainte.numero})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "PLAINTE_CREATION",
+        type_ressource="plainte",
+        ressource_id=plainte.id,
+        unite_id=unite_id,
+        details={"numero": plainte.numero},
+    )
     bd.flush()
     return serialiser_resume(plainte)
 
@@ -158,27 +181,41 @@ def detail(bd: SessionBD, ctx: Contexte, plainte_id: str) -> dict:
     personnes = []
     if ctx.a(Permission.PERSONNE_LIRE):
         for lien in bd.execute(select(LienPlaintePersonne).where(LienPlaintePersonne.plainte_id == p.id)).scalars():
-            personnes.append({
-                "lien_id": lien.id,
-                "personne_id": lien.personne_id,
-                "numero_interne": lien.personne.numero_interne,
-                "nom": lien.personne.nom,
-                "prenoms": lien.personne.prenoms,
-                "role": lien.role,
-                "observations": lien.observations,
-            })
+            personnes.append(
+                {
+                    "lien_id": lien.id,
+                    "personne_id": lien.personne_id,
+                    "numero_interne": lien.personne.numero_interne,
+                    "nom": lien.personne.nom,
+                    "prenoms": lien.personne.prenoms,
+                    "role": lien.role,
+                    "observations": lien.observations,
+                }
+            )
     dossiers = [
         {"id": d.id, "numero": d.numero, "intitule": d.intitule, "statut": d.statut}
         for d in bd.execute(
-            select(Dossier).join(LienDossierPlainte, LienDossierPlainte.dossier_id == Dossier.id)
+            select(Dossier)
+            .join(LienDossierPlainte, LienDossierPlainte.dossier_id == Dossier.id)
             .where(LienDossierPlainte.plainte_id == p.id, filtre_dossiers(ctx))
-        ).unique().scalars()
+        )
+        .unique()
+        .scalars()
     ]
-    faits = [
-        {"id": f.id, "reference": f.reference, "categorie": f.categorie.libelle,
-         "nature_information": f.nature_information, "etat_verification": f.etat_verification}
-        for f in bd.execute(select(Fait).where(Fait.plainte_id == p.id)).unique().scalars()
-    ] if ctx.a(Permission.FAIT_LIRE) else []
+    faits = (
+        [
+            {
+                "id": f.id,
+                "reference": f.reference,
+                "categorie": f.categorie.libelle,
+                "nature_information": f.nature_information,
+                "etat_verification": f.etat_verification,
+            }
+            for f in bd.execute(select(Fait).where(Fait.plainte_id == p.id)).unique().scalars()
+        ]
+        if ctx.a(Permission.FAIT_LIRE)
+        else []
+    )
     resultat = {
         **serialiser_resume(p),
         "service_enregistrement": p.service_enregistrement,
@@ -196,15 +233,17 @@ def detail(bd: SessionBD, ctx: Contexte, plainte_id: str) -> dict:
         "historique": historique(bd, "plainte", p.id),
         "transitions_possibles": sorted(TRANSITIONS_PLAINTE[StatutPlainte(p.statut)]),
     }
-    audit.enregistrer_ctx(bd, ctx, "PLAINTE_CONSULTATION", type_ressource="plainte", ressource_id=p.id,
-                          unite_id=p.unite_id)
+    audit.enregistrer_ctx(
+        bd, ctx, "PLAINTE_CONSULTATION", type_ressource="plainte", ressource_id=p.id, unite_id=p.unite_id
+    )
     return resultat
 
 
 def _controle_version(p: Plainte, version: int) -> None:
     if p.version != version:
-        raise Conflit("La plainte a été modifiée entre temps par un autre utilisateur. Rechargez-la.",
-                      code="VERSION_OBSOLETE")
+        raise Conflit(
+            "La plainte a été modifiée entre temps par un autre utilisateur. Rechargez-la.", code="VERSION_OBSOLETE"
+        )
 
 
 def modifier(bd: SessionBD, ctx: Contexte, plainte_id: str, donnees: schemas.PlainteModification) -> dict:
@@ -226,8 +265,15 @@ def modifier(bd: SessionBD, ctx: Contexte, plainte_id: str, donnees: schemas.Pla
     except StaleDataError as exc:
         raise Conflit("Modification concurrente détectée. Rechargez la plainte.", code="VERSION_OBSOLETE") from exc
     historiser(bd, ctx, "plainte", p.id, "MODIFICATION", changements)
-    audit.enregistrer_ctx(bd, ctx, "PLAINTE_MODIFICATION", type_ressource="plainte", ressource_id=p.id,
-                          unite_id=p.unite_id, details={"champs": sorted(changements)})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "PLAINTE_MODIFICATION",
+        type_ressource="plainte",
+        ressource_id=p.id,
+        unite_id=p.unite_id,
+        details={"champs": sorted(changements)},
+    )
     return serialiser_resume(p)
 
 
@@ -259,11 +305,28 @@ def changer_statut(bd: SessionBD, ctx: Contexte, plainte_id: str, donnees: schem
     p.statut = cible
     p.motif_statut = motif or None
     bd.flush()
-    historiser(bd, ctx, "plainte", p.id, "CHANGEMENT_STATUT",
-               {"avant": actuel.value, "apres": cible.value, "motif": motif or None,
-                "service_destinataire": donnees.service_destinataire})
-    audit.enregistrer_ctx(bd, ctx, "PLAINTE_STATUT", type_ressource="plainte", ressource_id=p.id, unite_id=p.unite_id,
-                          details={"avant": actuel.value, "apres": cible.value})
+    historiser(
+        bd,
+        ctx,
+        "plainte",
+        p.id,
+        "CHANGEMENT_STATUT",
+        {
+            "avant": actuel.value,
+            "apres": cible.value,
+            "motif": motif or None,
+            "service_destinataire": donnees.service_destinataire,
+        },
+    )
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "PLAINTE_STATUT",
+        type_ressource="plainte",
+        ressource_id=p.id,
+        unite_id=p.unite_id,
+        details={"avant": actuel.value, "apres": cible.value},
+    )
     return serialiser_resume(p)
 
 
@@ -273,18 +336,29 @@ def ajouter_personne(bd: SessionBD, ctx: Contexte, plainte_id: str, lien: schema
     if p.statut in (StatutPlainte.CLOTUREE, StatutPlainte.ARCHIVEE):
         raise Conflit("Une plainte clôturée ou archivée ne peut plus être modifiée.")
     personne = _personne_accessible(bd, ctx, lien.personne_id)
-    existe = bd.execute(select(LienPlaintePersonne.id).where(
-        LienPlaintePersonne.plainte_id == p.id, LienPlaintePersonne.personne_id == personne.id,
-        LienPlaintePersonne.role == lien.role)).first()
+    existe = bd.execute(
+        select(LienPlaintePersonne.id).where(
+            LienPlaintePersonne.plainte_id == p.id,
+            LienPlaintePersonne.personne_id == personne.id,
+            LienPlaintePersonne.role == lien.role,
+        )
+    ).first()
     if existe:
         raise Conflit("Cette personne est déjà associée à la plainte avec ce rôle.")
-    nouveau = LienPlaintePersonne(plainte_id=p.id, personne_id=personne.id, role=lien.role,
-                                  observations=lien.observations)
+    nouveau = LienPlaintePersonne(
+        plainte_id=p.id, personne_id=personne.id, role=lien.role, observations=lien.observations
+    )
     bd.add(nouveau)
     bd.flush()
     historiser(bd, ctx, "plainte", p.id, "AJOUT_PERSONNE", {"personne": personne.numero_interne, "role": lien.role})
-    audit.enregistrer_ctx(bd, ctx, "PLAINTE_LIEN_PERSONNE", type_ressource="plainte", ressource_id=p.id,
-                          details={"personne_id": personne.id, "role": lien.role})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "PLAINTE_LIEN_PERSONNE",
+        type_ressource="plainte",
+        ressource_id=p.id,
+        details={"personne_id": personne.id, "role": lien.role},
+    )
     return {"lien_id": nouveau.id}
 
 
@@ -294,8 +368,14 @@ def retirer_personne(bd: SessionBD, ctx: Contexte, plainte_id: str, lien_id: int
     lien = bd.get(LienPlaintePersonne, lien_id)
     if lien is None or lien.plainte_id != p.id:
         raise Introuvable("Lien introuvable.")
-    historiser(bd, ctx, "plainte", p.id, "RETRAIT_PERSONNE",
-               {"personne": lien.personne.numero_interne, "role": lien.role, "motif": motif})
+    historiser(
+        bd,
+        ctx,
+        "plainte",
+        p.id,
+        "RETRAIT_PERSONNE",
+        {"personne": lien.personne.numero_interne, "role": lien.role, "motif": motif},
+    )
     bd.delete(lien)
     audit.enregistrer_ctx(bd, ctx, "PLAINTE_LIEN_PERSONNE_RETRAIT", type_ressource="plainte", ressource_id=p.id)
     return {"message": "Lien retiré."}

@@ -44,14 +44,22 @@ def rapport(bd: SessionBD, ctx: Contexte) -> dict:
     ctx.exiger(Permission.VALIDATION_APPROUVER)
     lim = _limites(bd)
     return {
-        "sessions_expirees": bd.execute(select(func.count(Session.id)).where(Session.expire_le < lim["sessions"]))
-        .scalar_one(),
-        "captures_biometriques_echues": bd.execute(select(func.count(CaptureBiometrique.id)).where(
-            CaptureBiometrique.statut == StatutCapture.ACTIVE,
-            CaptureBiometrique.conserver_jusqua < lim["biometrie"])).scalar_one(),
-        "plaintes_archivees_echues": bd.execute(select(func.count(Plainte.id)).where(
-            Plainte.statut == StatutPlainte.ARCHIVEE, Plainte.modifie_le < lim["plaintes"],
-            Plainte.description != None)).scalar_one(),  # noqa: E711
+        "sessions_expirees": bd.execute(
+            select(func.count(Session.id)).where(Session.expire_le < lim["sessions"])
+        ).scalar_one(),
+        "captures_biometriques_echues": bd.execute(
+            select(func.count(CaptureBiometrique.id)).where(
+                CaptureBiometrique.statut == StatutCapture.ACTIVE,
+                CaptureBiometrique.conserver_jusqua < lim["biometrie"],
+            )
+        ).scalar_one(),
+        "plaintes_archivees_echues": bd.execute(
+            select(func.count(Plainte.id)).where(
+                Plainte.statut == StatutPlainte.ARCHIVEE,
+                Plainte.modifie_le < lim["plaintes"],
+                Plainte.description is not None,
+            )
+        ).scalar_one(),  # noqa: E711
         "limites": {k: (v.isoformat() if isinstance(v, (date, datetime)) else v) for k, v in lim.items()},
     }
 
@@ -60,8 +68,9 @@ def demander_purge(bd: SessionBD, ctx: Contexte, motif: str) -> dict:
     from tpgis.server.services.validations import creer_demande
 
     simulation = rapport(bd, ctx)
-    return creer_demande(bd, ctx, TypeValidation.PURGE_DONNEES, {"simulation": simulation},
-                         "Purge des données échues", motif)
+    return creer_demande(
+        bd, ctx, TypeValidation.PURGE_DONNEES, {"simulation": simulation}, "Purge des données échues", motif
+    )
 
 
 def executer_purge(bd: SessionBD, ctx: Contexte, motif: str) -> str:
@@ -70,15 +79,27 @@ def executer_purge(bd: SessionBD, ctx: Contexte, motif: str) -> str:
     lim = _limites(bd)
     nb_sessions = bd.execute(delete(Session).where(Session.expire_le < lim["sessions"])).rowcount or 0
     nb_captures = 0
-    for c in bd.execute(select(CaptureBiometrique).where(
-            CaptureBiometrique.statut == StatutCapture.ACTIVE,
-            CaptureBiometrique.conserver_jusqua < lim["biometrie"])).scalars().all():
+    for c in (
+        bd.execute(
+            select(CaptureBiometrique).where(
+                CaptureBiometrique.statut == StatutCapture.ACTIVE,
+                CaptureBiometrique.conserver_jusqua < lim["biometrie"],
+            )
+        )
+        .scalars()
+        .all()
+    ):
         executer_suppression(bd, ctx, c.id, f"Durée de conservation échue. {motif}")
         nb_captures += 1
     nb_plaintes = 0
     p = obtenir_parametres()
-    for plainte in bd.execute(select(Plainte).where(
-            Plainte.statut == StatutPlainte.ARCHIVEE, Plainte.modifie_le < lim["plaintes"])).scalars().all():
+    for plainte in (
+        bd.execute(
+            select(Plainte).where(Plainte.statut == StatutPlainte.ARCHIVEE, Plainte.modifie_le < lim["plaintes"])
+        )
+        .scalars()
+        .all()
+    ):
         if plainte.description == MENTION_PURGE:
             continue
         plainte.description = MENTION_PURGE

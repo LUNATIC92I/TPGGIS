@@ -5,9 +5,9 @@ from __future__ import annotations
 import io
 import zipfile
 
+from tests.conftest import FINALITE
 from tpgis.server.database.models import VersionDocument
 from tpgis.server.services.antivirus import EICAR
-from tests.conftest import FINALITE
 
 API = "/api/v1"
 PDF = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
@@ -18,9 +18,12 @@ def _plainte(client, h):
 
 
 def _deposer(client, h, plainte_id, nom, contenu, type_piece="PIECE_JUSTIFICATIVE"):
-    return client.post(f"{API}/documents", headers=h, data={"intitule": "Pièce de test", "type_piece": type_piece,
-                                                            "plainte_id": plainte_id},
-                       files={"fichier": (nom, contenu, "application/octet-stream")})
+    return client.post(
+        f"{API}/documents",
+        headers=h,
+        data={"intitule": "Pièce de test", "type_piece": type_piece, "plainte_id": plainte_id},
+        files={"fichier": (nom, contenu, "application/octet-stream")},
+    )
 
 
 def test_depot_et_telechargement_avec_integrite(client, connexions, app, parametres):
@@ -82,9 +85,10 @@ def test_fichier_infecte_jamais_disponible(client, connexions, app):
 def test_versions_et_acces_selon_dossier(client, connexions):
     h = connexions.entetes("officier.ndj")
     p = _plainte(client, h)
-    doc = _deposer(client, h, p["id"], "v1.txt", "version 1".encode()).json()
-    r = client.post(f"{API}/documents/{doc['id']}/versions", headers=h,
-                    files={"fichier": ("v2.txt", "version 2".encode(), "text/plain")})
+    doc = _deposer(client, h, p["id"], "v1.txt", b"version 1").json()
+    r = client.post(
+        f"{API}/documents/{doc['id']}/versions", headers=h, files={"fichier": ("v2.txt", b"version 2", "text/plain")}
+    )
     assert r.status_code == 201 and r.json()["version_courante"] == 2
     assert client.get(f"{API}/documents/{doc['id']}/contenu", headers=h).content == b"version 2"
     assert client.get(f"{API}/documents/{doc['id']}/contenu", headers=h, params={"version": 1}).content == b"version 1"
@@ -96,15 +100,24 @@ def test_versions_et_acces_selon_dossier(client, connexions):
 def test_biometrie_simulee_verification_un_pour_un(client, connexions):
     h = connexions.entetes("officier.ndj", FINALITE)
     personne = client.get(f"{API}/personnes", headers=h, params={"taille": 1}).json()["elements"][0]
-    r = client.post(f"{API}/biometrie/captures", headers=h, json={
-        "personne_id": personne["id"], "position_doigt": "POUCE_DROIT", "equipement": "Capteur simulé",
-        "fondement_legal": "Fondement juridique fictif pour le test", "consentement_recueilli": True})
+    r = client.post(
+        f"{API}/biometrie/captures",
+        headers=h,
+        json={
+            "personne_id": personne["id"],
+            "position_doigt": "POUCE_DROIT",
+            "equipement": "Capteur simulé",
+            "fondement_legal": "Fondement juridique fictif pour le test",
+            "consentement_recueilli": True,
+        },
+    )
     assert r.status_code == 201, r.text
     capture = r.json()
     assert capture["est_synthetique"] is True and capture["adaptateur"] == "simulation"
     assert "reference_modele" not in capture
-    r = client.post(f"{API}/biometrie/verifications", headers=h,
-                    json={"capture_id": capture["id"], "equipement": "Capteur simulé"})
+    r = client.post(
+        f"{API}/biometrie/verifications", headers=h, json={"capture_id": capture["id"], "equipement": "Capteur simulé"}
+    )
     assert r.status_code == 200 and r.json()["synthetique"] is True
     assert "SIMULÉ" in r.json()["commentaire"]
     # Recherche 1 contre N : desactivee.
@@ -121,10 +134,21 @@ def test_biometrie_exige_finalite(client, connexions):
 def test_suppression_capture_double_validation(client, connexions):
     h = connexions.entetes("officier.ndj", FINALITE)
     personne = client.get(f"{API}/personnes", headers=h, params={"taille": 1}).json()["elements"][0]
-    capture = client.post(f"{API}/biometrie/captures", headers=h, json={
-        "personne_id": personne["id"], "position_doigt": "INDEX_GAUCHE", "equipement": "Capteur simulé",
-        "fondement_legal": "Fondement juridique fictif pour le test", "consentement_recueilli": True}).json()
+    capture = client.post(
+        f"{API}/biometrie/captures",
+        headers=h,
+        json={
+            "personne_id": personne["id"],
+            "position_doigt": "INDEX_GAUCHE",
+            "equipement": "Capteur simulé",
+            "fondement_legal": "Fondement juridique fictif pour le test",
+            "consentement_recueilli": True,
+        },
+    ).json()
     # L'officier n'a pas la permission de demander une suppression.
-    r = client.post(f"{API}/biometrie/captures/{capture['id']}/suppression", headers=h,
-                    json={"motif": "Fin de la procédure fictive"})
+    r = client.post(
+        f"{API}/biometrie/captures/{capture['id']}/suppression",
+        headers=h,
+        json={"motif": "Fin de la procédure fictive"},
+    )
     assert r.status_code == 403

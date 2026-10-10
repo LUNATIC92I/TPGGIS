@@ -39,7 +39,8 @@ def serialiser_resume(d: Dossier) -> dict:
         "unite_nom": d.unite.nom if d.unite else None,
         "enqueteur_id": d.enqueteur_id,
         "enqueteur": f"{d.enqueteur.grade or ''} {d.enqueteur.nom} {d.enqueteur.prenoms}".strip()
-        if d.enqueteur else None,
+        if d.enqueteur
+        else None,
         "statut": d.statut,
         "date_ouverture": d.date_ouverture,
         "date_cloture": d.date_cloture,
@@ -51,15 +52,24 @@ def serialiser_resume(d: Dossier) -> dict:
 def obtenir(bd: SessionBD, ctx: Contexte, dossier_id: str) -> Dossier:
     d = bd.execute(select(Dossier).where(Dossier.id == dossier_id, filtre_dossiers(ctx))).unique().scalar_one_or_none()
     if d is None:
-        audit.enregistrer_ctx(bd, ctx, "DOSSIER_CONSULTATION", resultat="REFUS", type_ressource="dossier",
-                              ressource_id=dossier_id)
+        audit.enregistrer_ctx(
+            bd, ctx, "DOSSIER_CONSULTATION", resultat="REFUS", type_ressource="dossier", ressource_id=dossier_id
+        )
         bd.commit()
         raise Introuvable(HORS_PERIMETRE)
     return d
 
 
-def lister(bd: SessionBD, ctx: Contexte, *, statut: str | None = None, unite_id: str | None = None,
-           numero: str | None = None, page: int = 1, taille: int = 50) -> dict:
+def lister(
+    bd: SessionBD,
+    ctx: Contexte,
+    *,
+    statut: str | None = None,
+    unite_id: str | None = None,
+    numero: str | None = None,
+    page: int = 1,
+    taille: int = 50,
+) -> dict:
     ctx.exiger(Permission.DOSSIER_LIRE)
     requete = select(Dossier).where(filtre_dossiers(ctx))
     if statut:
@@ -123,28 +133,46 @@ def detail(bd: SessionBD, ctx: Contexte, dossier_id: str) -> dict:
     plaintes = [
         {"id": p.id, "numero": p.numero, "statut": p.statut, "recue_le": p.recue_le}
         for p in bd.execute(
-            select(Plainte).join(LienDossierPlainte, LienDossierPlainte.plainte_id == Plainte.id)
+            select(Plainte)
+            .join(LienDossierPlainte, LienDossierPlainte.plainte_id == Plainte.id)
             .where(LienDossierPlainte.dossier_id == d.id)
-        ).unique().scalars()
+        )
+        .unique()
+        .scalars()
     ]
     personnes = []
     if ctx.a(Permission.PERSONNE_LIRE):
         personnes = [
-            {"lien_id": lien.id, "personne_id": lien.personne_id, "numero_interne": lien.personne.numero_interne,
-             "nom": lien.personne.nom, "prenoms": lien.personne.prenoms, "role": lien.role}
+            {
+                "lien_id": lien.id,
+                "personne_id": lien.personne_id,
+                "numero_interne": lien.personne.numero_interne,
+                "nom": lien.personne.nom,
+                "prenoms": lien.personne.prenoms,
+                "role": lien.role,
+            }
             for lien in bd.execute(select(LienDossierPersonne).where(LienDossierPersonne.dossier_id == d.id)).scalars()
         ]
     actes = [
-        {"id": a.id, "type_acte": a.type_acte, "reference": a.reference, "date_acte": a.date_acte,
-         "resume": a.resume}
-        for a in bd.execute(select(ActeProcedure).where(ActeProcedure.dossier_id == d.id)
-                            .order_by(ActeProcedure.date_acte)).scalars()
+        {"id": a.id, "type_acte": a.type_acte, "reference": a.reference, "date_acte": a.date_acte, "resume": a.resume}
+        for a in bd.execute(
+            select(ActeProcedure).where(ActeProcedure.dossier_id == d.id).order_by(ActeProcedure.date_acte)
+        ).scalars()
     ]
-    faits = [
-        {"id": f.id, "reference": f.reference, "categorie": f.categorie.libelle,
-         "nature_information": f.nature_information, "etat_verification": f.etat_verification}
-        for f in bd.execute(select(Fait).where(Fait.dossier_id == d.id)).unique().scalars()
-    ] if ctx.a(Permission.FAIT_LIRE) else []
+    faits = (
+        [
+            {
+                "id": f.id,
+                "reference": f.reference,
+                "categorie": f.categorie.libelle,
+                "nature_information": f.nature_information,
+                "etat_verification": f.etat_verification,
+            }
+            for f in bd.execute(select(Fait).where(Fait.dossier_id == d.id)).unique().scalars()
+        ]
+        if ctx.a(Permission.FAIT_LIRE)
+        else []
+    )
     resultat = {
         **serialiser_resume(d),
         "observations": d.observations,
@@ -155,8 +183,9 @@ def detail(bd: SessionBD, ctx: Contexte, dossier_id: str) -> dict:
         "faits": faits,
         "historique": historique(bd, "dossier", d.id),
     }
-    audit.enregistrer_ctx(bd, ctx, "DOSSIER_CONSULTATION", type_ressource="dossier", ressource_id=d.id,
-                          unite_id=d.unite_id)
+    audit.enregistrer_ctx(
+        bd, ctx, "DOSSIER_CONSULTATION", type_ressource="dossier", ressource_id=d.id, unite_id=d.unite_id
+    )
     return resultat
 
 
@@ -184,8 +213,15 @@ def modifier(bd: SessionBD, ctx: Contexte, dossier_id: str, donnees: schemas.Dos
     changements = appliquer_modifications(d, valeurs)
     bd.flush()
     historiser(bd, ctx, "dossier", d.id, "MODIFICATION", changements)
-    audit.enregistrer_ctx(bd, ctx, "DOSSIER_MODIFICATION", type_ressource="dossier", ressource_id=d.id,
-                          unite_id=d.unite_id, details={"champs": sorted(changements)})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "DOSSIER_MODIFICATION",
+        type_ressource="dossier",
+        ressource_id=d.id,
+        unite_id=d.unite_id,
+        details={"champs": sorted(changements)},
+    )
     return serialiser_resume(d)
 
 
@@ -200,8 +236,9 @@ def ajouter_acte(bd: SessionBD, ctx: Contexte, dossier_id: str, donnees: schemas
     bd.add(acte)
     bd.flush()
     historiser(bd, ctx, "dossier", d.id, "AJOUT_ACTE", {"type": donnees.type_acte, "reference": donnees.reference})
-    audit.enregistrer_ctx(bd, ctx, "DOSSIER_ACTE", type_ressource="dossier", ressource_id=d.id,
-                          details={"acte_id": acte.id})
+    audit.enregistrer_ctx(
+        bd, ctx, "DOSSIER_ACTE", type_ressource="dossier", ressource_id=d.id, details={"acte_id": acte.id}
+    )
     return {"id": acte.id}
 
 
@@ -210,13 +247,17 @@ def rattacher_plainte(bd: SessionBD, ctx: Contexte, dossier_id: str, plainte_id:
     d = obtenir(bd, ctx, dossier_id)
     if bd.execute(select(Plainte.id).where(Plainte.id == plainte_id, filtre_plaintes(ctx))).first() is None:
         raise DonneesInvalides("Plainte inconnue ou hors périmètre.")
-    if bd.execute(select(LienDossierPlainte.id).where(LienDossierPlainte.dossier_id == d.id,
-                                                      LienDossierPlainte.plainte_id == plainte_id)).first():
+    if bd.execute(
+        select(LienDossierPlainte.id).where(
+            LienDossierPlainte.dossier_id == d.id, LienDossierPlainte.plainte_id == plainte_id
+        )
+    ).first():
         raise Conflit("Cette plainte est déjà rattachée au dossier.")
     bd.add(LienDossierPlainte(dossier_id=d.id, plainte_id=plainte_id))
     historiser(bd, ctx, "dossier", d.id, "RATTACHEMENT_PLAINTE", {"plainte_id": plainte_id})
-    audit.enregistrer_ctx(bd, ctx, "DOSSIER_RATTACHEMENT", type_ressource="dossier", ressource_id=d.id,
-                          details={"plainte_id": plainte_id})
+    audit.enregistrer_ctx(
+        bd, ctx, "DOSSIER_RATTACHEMENT", type_ressource="dossier", ressource_id=d.id, details={"plainte_id": plainte_id}
+    )
     return {"message": "Plainte rattachée."}
 
 
@@ -224,15 +265,24 @@ def ajouter_personne(bd: SessionBD, ctx: Contexte, dossier_id: str, lien: schema
     ctx.exiger(Permission.DOSSIER_MODIFIER)
     d = obtenir(bd, ctx, dossier_id)
     personne = _personne_accessible(bd, ctx, lien.personne_id)
-    if bd.execute(select(LienDossierPersonne.id).where(LienDossierPersonne.dossier_id == d.id,
-                                                       LienDossierPersonne.personne_id == personne.id,
-                                                       LienDossierPersonne.role == lien.role)).first():
+    if bd.execute(
+        select(LienDossierPersonne.id).where(
+            LienDossierPersonne.dossier_id == d.id,
+            LienDossierPersonne.personne_id == personne.id,
+            LienDossierPersonne.role == lien.role,
+        )
+    ).first():
         raise Conflit("Cette personne est déjà associée au dossier avec ce rôle.")
     nouveau = LienDossierPersonne(dossier_id=d.id, personne_id=personne.id, role=lien.role)
     bd.add(nouveau)
     bd.flush()
     historiser(bd, ctx, "dossier", d.id, "AJOUT_PERSONNE", {"personne": personne.numero_interne, "role": lien.role})
-    audit.enregistrer_ctx(bd, ctx, "DOSSIER_LIEN_PERSONNE", type_ressource="dossier", ressource_id=d.id,
-                          details={"personne_id": personne.id, "role": lien.role})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "DOSSIER_LIEN_PERSONNE",
+        type_ressource="dossier",
+        ressource_id=d.id,
+        details={"personne_id": personne.id, "role": lien.role},
+    )
     return {"lien_id": nouveau.id}
-

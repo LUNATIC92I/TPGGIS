@@ -84,8 +84,14 @@ def cmd_creer_administrateur(args, p) -> None:
             sys.exit("Un administrateur fonctionnel existe déjà : l'amorçage n'est possible qu'une fois.")
         unite = bd.execute(select(Unite).where(Unite.code == args.code_unite)).scalar_one_or_none()
         if unite is None:
-            unite = Unite(code=args.code_unite, nom=args.nom_unite, type_unite=TypeUnite.DIRECTION,
-                          corps=Corps(args.corps), province_code="TD-ND", ville="N'Djamena")
+            unite = Unite(
+                code=args.code_unite,
+                nom=args.nom_unite,
+                type_unite=TypeUnite.DIRECTION,
+                corps=Corps(args.corps),
+                province_code="TD-ND",
+                ville="N'Djamena",
+            )
             bd.add(unite)
             bd.flush()
         mot_de_passe = getpass.getpass("Mot de passe initial : ")
@@ -94,14 +100,27 @@ def cmd_creer_administrateur(args, p) -> None:
         erreurs = passwords.controler_politique(mot_de_passe, p.mot_de_passe_longueur_min, args.identifiant)
         if erreurs:
             sys.exit(" ".join(erreurs))
-        u = Utilisateur(identifiant=args.identifiant, nom=args.nom, prenoms=args.prenoms, unite_id=unite.id,
-                        role_id=role.id, portee=Portee.NATIONALE, mot_de_passe_hash=passwords.hacher(mot_de_passe),
-                        doit_changer_mot_de_passe=True)
+        u = Utilisateur(
+            identifiant=args.identifiant,
+            nom=args.nom,
+            prenoms=args.prenoms,
+            unite_id=unite.id,
+            role_id=role.id,
+            portee=Portee.NATIONALE,
+            mot_de_passe_hash=passwords.hacher(mot_de_passe),
+            doit_changer_mot_de_passe=True,
+        )
         bd.add(u)
         bd.flush()
-        audit.enregistrer(bd, action="AMORCAGE_ADMINISTRATEUR", trace_id="00000000-0000-0000-0000-000000000000",
-                          identifiant="cli", type_ressource="utilisateur", ressource_id=u.id,
-                          details={"identifiant": u.identifiant})
+        audit.enregistrer(
+            bd,
+            action="AMORCAGE_ADMINISTRATEUR",
+            trace_id="00000000-0000-0000-0000-000000000000",
+            identifiant="cli",
+            type_ressource="utilisateur",
+            ressource_id=u.id,
+            details={"identifiant": u.identifiant},
+        )
     print("Administrateur créé. Changement de mot de passe et enrôlement MFA exigés à la première connexion.")
 
 
@@ -115,8 +134,13 @@ def cmd_charger_demonstration(args, p) -> None:
     with fabrique.transaction() as bd:
         initialiser_metadonnees(bd, p)
         initialiser_roles(bd)
-        volumes = Volumes(personnes=args.personnes, plaintes=args.plaintes, faits=args.faits,
-                          dossiers=args.dossiers, captures=args.captures)
+        volumes = Volumes(
+            personnes=args.personnes,
+            plaintes=args.plaintes,
+            faits=args.faits,
+            dossiers=args.dossiers,
+            captures=args.captures,
+        )
         resultat = generer(bd, p, volumes)
     print(json.dumps(resultat, ensure_ascii=False, indent=2))
 
@@ -138,8 +162,14 @@ def cmd_sauvegarder(_args, p) -> None:
         revision = revision_courante(bd)
     dossier = sauvegarde.sauvegarder(p, revision)
     with fabrique.transaction() as bd:
-        audit.enregistrer(bd, action="SAUVEGARDE", trace_id="00000000-0000-0000-0000-000000000000",
-                          identifiant="cli", type_ressource="systeme", details={"dossier": dossier.name})
+        audit.enregistrer(
+            bd,
+            action="SAUVEGARDE",
+            trace_id="00000000-0000-0000-0000-000000000000",
+            identifiant="cli",
+            type_ressource="systeme",
+            details={"dossier": dossier.name},
+        )
     print(f"Sauvegarde créée : {dossier}")
 
 
@@ -160,8 +190,14 @@ def cmd_restaurer(args, p) -> None:
     fabrique.moteur.dispose()
     manifeste = sauvegarde.restaurer(p, Path(args.dossier), confirmer_ecrasement=True)
     with fabrique.transaction() as bd:
-        audit.enregistrer(bd, action="RESTAURATION", trace_id="00000000-0000-0000-0000-000000000000",
-                          identifiant="cli", type_ressource="systeme", details={"sauvegarde": manifeste["cree_le"]})
+        audit.enregistrer(
+            bd,
+            action="RESTAURATION",
+            trace_id="00000000-0000-0000-0000-000000000000",
+            identifiant="cli",
+            type_ressource="systeme",
+            details={"sauvegarde": manifeste["cree_le"]},
+        )
     print(f"Restauration effectuée depuis la sauvegarde du {manifeste['cree_le']}.")
 
 

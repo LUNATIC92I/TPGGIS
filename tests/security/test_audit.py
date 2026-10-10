@@ -7,9 +7,9 @@ import json
 import pytest
 from sqlalchemy import text
 
+from tests.conftest import FINALITE
 from tpgis.server.database.models import EvenementAudit
 from tpgis.server.database.seed.demonstration import MOT_DE_PASSE_DEMO
-from tests.conftest import FINALITE
 
 API = "/api/v1"
 
@@ -33,8 +33,11 @@ def test_consultation_sensible_journalisee_avec_finalite(client, connexions):
 
 def test_recherche_journalisee(client, connexions):
     h = connexions.entetes("officier.ndj")
-    r = client.post(f"{API}/recherche", headers=h, json={"finalite": "Contrôle d'identité", "nom": "MAHAMAT",
-                                                        "numero_document": "FICTIF12345678"})
+    r = client.post(
+        f"{API}/recherche",
+        headers=h,
+        json={"finalite": "Contrôle d'identité", "nom": "MAHAMAT", "numero_document": "FICTIF12345678"},
+    )
     trace = r.json()["trace_audit"]
     ev = _evenements(client, connexions, action="RECHERCHE", trace_id=trace)[0]
     assert ev["finalite"] == "Contrôle d'identité"
@@ -44,8 +47,11 @@ def test_recherche_journalisee(client, connexions):
 
 def test_actions_principales_journalisees(client, connexions):
     h = connexions.entetes("officier.ndj")
-    client.post(f"{API}/plaintes", headers=h, json={"service_enregistrement": "Accueil",
-                                                    "description": "Plainte fictive pour test d'audit."})
+    client.post(
+        f"{API}/plaintes",
+        headers=h,
+        json={"service_enregistrement": "Accueil", "description": "Plainte fictive pour test d'audit."},
+    )
     client.post(f"{API}/auth/connexion", json={"identifiant": "officier.ndj", "mot_de_passe": "faux"})
     actions = {e["action"] for e in _evenements(client, connexions)}
     assert {"CONNEXION", "PLAINTE_CREATION"} <= actions
@@ -55,8 +61,11 @@ def test_actions_principales_journalisees(client, connexions):
 
 def test_journal_sans_secret(client, connexions, app):
     h = connexions.entetes("officier.ndj", FINALITE)
-    client.post(f"{API}/auth/reauthentification", headers=h, json={"mot_de_passe": MOT_DE_PASSE_DEMO,
-                                                                   "code_mfa": connexions.code("officier.ndj")})
+    client.post(
+        f"{API}/auth/reauthentification",
+        headers=h,
+        json={"mot_de_passe": MOT_DE_PASSE_DEMO, "code_mfa": connexions.code("officier.ndj")},
+    )
     jeton = h["Authorization"].split()[1]
     with app.state.fabrique.transaction() as bd:
         contenu = json.dumps([e.details for e in bd.query(EvenementAudit).all()], ensure_ascii=False)
@@ -95,8 +104,11 @@ def test_changement_de_droits_journalise(client, connexions):
     h = connexions.entetes("admin.fonctionnel")
     roles = {r["code"]: r for r in client.get(f"{API}/roles", headers=h).json()}
     cible = client.get(f"{API}/utilisateurs", headers=h, params={"texte": "accueil.abc"}).json()["elements"][0]
-    r = client.post(f"{API}/utilisateurs/{cible['id']}/role", headers=h,
-                    json={"role_id": roles["CONSULTATION"]["id"], "motif": "Réaffectation fictive de l'agent"})
+    r = client.post(
+        f"{API}/utilisateurs/{cible['id']}/role",
+        headers=h,
+        json={"role_id": roles["CONSULTATION"]["id"], "motif": "Réaffectation fictive de l'agent"},
+    )
     assert r.json()["statut"] == "APPLIQUE"
     ev = _evenements(client, connexions, action="DROITS_MODIFICATION")
     assert ev[0]["details"]["role_apres"] == "CONSULTATION"

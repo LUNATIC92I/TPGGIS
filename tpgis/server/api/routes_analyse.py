@@ -22,31 +22,54 @@ routeur = APIRouter()
 
 
 @routeur.get("/statistiques/tableau-de-bord", tags=["Statistiques"])
-def tableau_de_bord(du: date | None = None, au: date | None = None, unite_id: str | None = None,
-                    categorie_id: str | None = None, ctx: Contexte = Depends(contexte),
-                    bd: SessionBD = Depends(base)):
+def tableau_de_bord(
+    du: date | None = None,
+    au: date | None = None,
+    unite_id: str | None = None,
+    categorie_id: str | None = None,
+    ctx: Contexte = Depends(contexte),
+    bd: SessionBD = Depends(base),
+):
     return valider(bd, statistiques.tableau_de_bord(bd, ctx, du, au, unite_id, categorie_id))
 
 
 @routeur.get("/carte/donnees", tags=["Cartographie"])
-def donnees_carte(du: date | None = None, au: date | None = None, unite_id: str | None = None,
-                  categorie_id: str | None = None, ctx: Contexte = Depends(contexte), bd: SessionBD = Depends(base)):
+def donnees_carte(
+    du: date | None = None,
+    au: date | None = None,
+    unite_id: str | None = None,
+    categorie_id: str | None = None,
+    ctx: Contexte = Depends(contexte),
+    bd: SessionBD = Depends(base),
+):
     return valider(bd, statistiques.donnees_carte(bd, ctx, du, au, unite_id, categorie_id))
 
 
 @routeur.get("/statistiques/export.csv", tags=["Statistiques"])
-def export_csv(du: date | None = None, au: date | None = None, unite_id: str | None = None,
-               categorie_id: str | None = None, ctx: Contexte = Depends(contexte), bd: SessionBD = Depends(base),
-               p: ParametresServeur = Depends(parametres)):
+def export_csv(
+    du: date | None = None,
+    au: date | None = None,
+    unite_id: str | None = None,
+    categorie_id: str | None = None,
+    ctx: Contexte = Depends(contexte),
+    bd: SessionBD = Depends(base),
+    p: ParametresServeur = Depends(parametres),
+):
     nom, contenu = rapports.export_statistiques_csv(bd, ctx, p, du, au, unite_id, categorie_id)
     bd.commit()
     return reponse_fichier(nom, "text/csv; charset=utf-8", contenu)
 
 
 @routeur.get("/statistiques/rapport.pdf", tags=["Statistiques"])
-def rapport_pdf(du: date | None = None, au: date | None = None, unite_id: str | None = None,
-                categorie_id: str | None = None, ctx: Contexte = Depends(contexte), bd: SessionBD = Depends(base),
-                p: ParametresServeur = Depends(parametres)):
+def rapport_pdf(
+    du: date | None = None,
+    au: date | None = None,
+    unite_id: str | None = None,
+    categorie_id: str | None = None,
+    ctx: Contexte = Depends(contexte),
+    bd: SessionBD = Depends(base),
+    p: ParametresServeur = Depends(parametres),
+):
     nom, contenu = rapports.rapport_statistique_pdf(bd, ctx, p, du, au, unite_id, categorie_id)
     bd.commit()
     return reponse_fichier(nom, "application/pdf", contenu)
@@ -61,18 +84,25 @@ def sante(request: Request):
         etat_base = "disponible"
     except Exception:
         etat_base = "indisponible"
-    return {"application": "TPGIS", "version": __version__, "base_de_donnees": etat_base,
-            "statut": "ok" if etat_base == "disponible" else "degrade"}
+    return {
+        "application": "TPGIS",
+        "version": __version__,
+        "base_de_donnees": etat_base,
+        "statut": "ok" if etat_base == "disponible" else "degrade",
+    }
 
 
 @routeur.get("/systeme/etat", tags=["Supervision"])
-def etat_systeme(ctx: Contexte = Depends(contexte), bd: SessionBD = Depends(base),
-                 p: ParametresServeur = Depends(parametres)):
+def etat_systeme(
+    ctx: Contexte = Depends(contexte), bd: SessionBD = Depends(base), p: ParametresServeur = Depends(parametres)
+):
     ctx.exiger(Permission.SYSTEME_SUPERVISER)
     from tpgis.server.database.models import MetadonneeInstance
 
     meta = {m.cle: m.valeur for m in bd.query(MetadonneeInstance).all()}
-    sauvegardes = sorted(p.repertoire_sauvegardes.glob("tpgis_sauvegarde_*")) if p.repertoire_sauvegardes.exists() else []
+    sauvegardes = (
+        sorted(p.repertoire_sauvegardes.glob("tpgis_sauvegarde_*")) if p.repertoire_sauvegardes.exists() else []
+    )
     return {
         "version": __version__,
         "environnement": str(p.environnement),
@@ -86,8 +116,9 @@ def etat_systeme(ctx: Contexte = Depends(contexte), bd: SessionBD = Depends(base
 
 
 @routeur.post("/systeme/sauvegardes", tags=["Supervision"], status_code=201)
-def lancer_sauvegarde(ctx: Contexte = Depends(contexte), bd: SessionBD = Depends(base),
-                      p: ParametresServeur = Depends(parametres)):
+def lancer_sauvegarde(
+    ctx: Contexte = Depends(contexte), bd: SessionBD = Depends(base), p: ParametresServeur = Depends(parametres)
+):
     ctx.exiger(Permission.SAUVEGARDE_GERER)
     exiger_reauthentification_recente(ctx, p)
     from tpgis.server.database.initialisation import revision_courante
@@ -98,8 +129,9 @@ def lancer_sauvegarde(ctx: Contexte = Depends(contexte), bd: SessionBD = Depends
 
 
 @routeur.post("/systeme/documents/reanalyse", tags=["Supervision"])
-def reanalyser(ctx: Contexte = Depends(contexte), bd: SessionBD = Depends(base),
-               p: ParametresServeur = Depends(parametres)):
+def reanalyser(
+    ctx: Contexte = Depends(contexte), bd: SessionBD = Depends(base), p: ParametresServeur = Depends(parametres)
+):
     ctx.exiger(Permission.SYSTEME_SUPERVISER)
     resultat = reanalyser_en_erreur(bd, p)
     audit.enregistrer_ctx(bd, ctx, "DOCUMENTS_REANALYSE", type_ressource="systeme", details=resultat)

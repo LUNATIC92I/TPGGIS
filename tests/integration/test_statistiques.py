@@ -6,15 +6,16 @@ API = "/api/v1"
 
 
 def test_tableau_de_bord_calcule_sur_donnees_reelles(client, connexions, app):
-    from sqlalchemy import text
+    from sqlalchemy import bindparam, text
 
     h = connexions.entetes("responsable.ndj")
     stats = client.get(f"{API}/statistiques/tableau-de-bord", headers=h).json()
-    unites = {u["id"] for u in client.get(f"{API}/unites", headers=h).json()
-              if u["code"] in ("CP-NDJ", "CP-NDJ-A1")}
-    marqueurs = ",".join(f"'{u}'" for u in unites)
+    unites = {u["id"] for u in client.get(f"{API}/unites", headers=h).json() if u["code"] in ("CP-NDJ", "CP-NDJ-A1")}
+    requete = text("SELECT COUNT(*) FROM plaintes WHERE unite_id IN :unites").bindparams(
+        bindparam("unites", expanding=True)
+    )
     with app.state.fabrique.moteur.connect() as c:
-        attendu = c.execute(text(f"SELECT COUNT(*) FROM plaintes WHERE unite_id IN ({marqueurs})")).scalar()
+        attendu = c.execute(requete, {"unites": list(unites)}).scalar()
     assert stats["indicateurs"]["plaintes_total"] == attendu
     assert sum(stats["par_statut"].values()) == attendu
     assert sum(c["nombre"] for c in stats["par_categorie"]) == attendu
@@ -25,7 +26,7 @@ def test_statistiques_sans_donnees_nominatives(client, connexions):
     h = connexions.entetes("responsable.ndj")
     texte = client.get(f"{API}/statistiques/tableau-de-bord", headers=h).text
     carte = client.get(f"{API}/carte/donnees", headers=h).text
-    for nom in ("ABAKAR", "MAHAMAT", "Achta", "\"prenoms\"", "\"date_naissance\"", "numero_interne"):
+    for nom in ("ABAKAR", "MAHAMAT", "Achta", '"prenoms"', '"date_naissance"', "numero_interne"):
         assert nom not in texte and nom not in carte
 
 
@@ -36,12 +37,15 @@ def test_carte_agregats_par_province_et_filtres(client, connexions):
     assert set(provinces) == {"TD-ND"}  # perimetre : N'Djamena uniquement
     assert any(u["code"] == "CP-ABC" and not u["dans_perimetre"] for u in carte["unites"])
     categorie = client.get(f"{API}/categories", headers=h).json()[0]["id"]
-    filtree = client.get(f"{API}/carte/donnees", headers=h,
-                         params={"du": "2020-01-01", "categorie_id": categorie}).json()
+    filtree = client.get(
+        f"{API}/carte/donnees", headers=h, params={"du": "2020-01-01", "categorie_id": categorie}
+    ).json()
     total_filtre = sum(p["plaintes"] or 0 for p in filtree["provinces"])
     assert total_filtre <= provinces["TD-ND"]["plaintes"]
-    assert client.get(f"{API}/carte/donnees", headers=h, params={"du": "2026-05-01", "au": "2026-01-01"}
-                      ).status_code == 422
+    assert (
+        client.get(f"{API}/carte/donnees", headers=h, params={"du": "2026-05-01", "au": "2026-01-01"}).status_code
+        == 422
+    )
 
 
 def test_seuil_de_confidentialite(client, connexions):
@@ -63,7 +67,9 @@ def test_exports_reserves_et_traces(client, connexions):
     r = client.get(f"{API}/statistiques/rapport.pdf", headers=h)
     assert r.status_code == 200 and r.content.startswith(b"%PDF")
     h_aud = connexions.entetes("auditeur")
-    actions = {e["action"] for e in client.get(f"{API}/audit", headers=h_aud, params={"taille": 200}).json()["elements"]}
+    actions = {
+        e["action"] for e in client.get(f"{API}/audit", headers=h_aud, params={"taille": 200}).json()["elements"]
+    }
     assert {"EXPORT_STATISTIQUES_CSV", "EXPORT_RAPPORT_PDF"} <= actions
 
 

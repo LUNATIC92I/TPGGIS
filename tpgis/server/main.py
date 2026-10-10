@@ -73,9 +73,16 @@ def _tracer_refus(request: Request, exc: ErreurMetier) -> None:
                 unite_id=ctx.utilisateur.unite_id if ctx else None,
                 adresse_ip=request.client.host if request.client else None,
                 finalite=ctx.finalite if ctx else None,
-                details={"methode": request.method, "chemin": request.url.path, "code": exc.code,
-                         **({"permissions_manquantes": exc.details.get("permissions_manquantes")}
-                            if exc.details.get("permissions_manquantes") else {})},
+                details={
+                    "methode": request.method,
+                    "chemin": request.url.path,
+                    "code": exc.code,
+                    **(
+                        {"permissions_manquantes": exc.details.get("permissions_manquantes")}
+                        if exc.details.get("permissions_manquantes")
+                        else {}
+                    ),
+                },
             )
     except Exception:  # pragma: no cover  (ne jamais masquer l'erreur initiale)
         journal.exception("Impossible de journaliser un refus d'accès")
@@ -122,17 +129,21 @@ def creer_application(p: ParametresServeur | None = None, *, migrer_au_demarrage
     @app.exception_handler(RequestValidationError)
     async def _erreur_validation(request: Request, exc: RequestValidationError):
         champs = [
-            {"champ": ".".join(str(x) for x in e.get("loc", [])[1:]), "message": e.get("msg")}
-            for e in exc.errors()
+            {"champ": ".".join(str(x) for x in e.get("loc", [])[1:]), "message": e.get("msg")} for e in exc.errors()
         ]
-        return _reponse_erreur(request, 422, "Données invalides : vérifiez les champs signalés.",
-                               "DONNEES_INVALIDES", {"champs": champs})
+        return _reponse_erreur(
+            request, 422, "Données invalides : vérifiez les champs signalés.", "DONNEES_INVALIDES", {"champs": champs}
+        )
 
     @app.exception_handler(Exception)
     async def _erreur_interne(request: Request, exc: Exception):
         journal.exception("Erreur interne (trace %s)", getattr(request.state, "trace_id", "?"))
-        return _reponse_erreur(request, 500, "Erreur interne du serveur. Communiquez l'identifiant de trace "
-                                             "à l'administration.", "ERREUR_INTERNE")
+        return _reponse_erreur(
+            request,
+            500,
+            "Erreur interne du serveur. Communiquez l'identifiant de trace à l'administration.",
+            "ERREUR_INTERNE",
+        )
 
     for module in (routes_auth, routes_admin, routes_operations, routes_analyse):
         app.include_router(module.routeur, prefix=PREFIXE)
@@ -146,8 +157,13 @@ def lancer() -> None:
     p = obtenir_parametres()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     app = creer_application(p)
-    options = {"host": p.hote, "port": p.port, "proxy_headers": p.tls_termine_par_proxy,
-               "server_header": False, "date_header": False}
+    options = {
+        "host": p.hote,
+        "port": p.port,
+        "proxy_headers": p.tls_termine_par_proxy,
+        "server_header": False,
+        "date_header": False,
+    }
     if p.tls_certificat and p.tls_cle:
         options.update(ssl_certfile=str(p.tls_certificat), ssl_keyfile=str(p.tls_cle))
     elif not p.tls_termine_par_proxy:

@@ -187,8 +187,14 @@ def serialiser(doc: Document) -> dict:
     }
 
 
-def deposer(bd: SessionBD, ctx: Contexte, p: ParametresServeur, meta: schemas.MetadonneesDocument,
-            nom_fichier: str, donnees: bytes) -> dict:
+def deposer(
+    bd: SessionBD,
+    ctx: Contexte,
+    p: ParametresServeur,
+    meta: schemas.MetadonneesDocument,
+    nom_fichier: str,
+    donnees: bytes,
+) -> dict:
     ctx.exiger(Permission.DOCUMENT_AJOUTER)
     unite_id = _parent_accessible(bd, ctx, meta)
     nom, extension = valider_fichier(bd, nom_fichier, donnees)
@@ -197,9 +203,16 @@ def deposer(bd: SessionBD, ctx: Contexte, p: ParametresServeur, meta: schemas.Me
             raise DonneesInvalides("Une photographie d'identification doit être rattachée à une personne.")
         if extension not in ("png", "jpg", "jpeg"):
             raise DonneesInvalides("Une photographie d'identification doit être au format PNG ou JPEG.")
-    doc = Document(intitule=meta.intitule, type_piece=meta.type_piece, plainte_id=meta.plainte_id,
-                   dossier_id=meta.dossier_id, personne_id=meta.personne_id, unite_id=unite_id,
-                   version_courante=1, cree_par_id=ctx.uid)
+    doc = Document(
+        intitule=meta.intitule,
+        type_piece=meta.type_piece,
+        plainte_id=meta.plainte_id,
+        dossier_id=meta.dossier_id,
+        personne_id=meta.personne_id,
+        unite_id=unite_id,
+        version_courante=1,
+        cree_par_id=ctx.uid,
+    )
     bd.add(doc)
     bd.flush()
     version = _nouvelle_version(bd, ctx, p, doc, 1, nom, extension, donnees)
@@ -210,8 +223,9 @@ def deposer(bd: SessionBD, ctx: Contexte, p: ParametresServeur, meta: schemas.Me
     return serialiser(doc)
 
 
-def _nouvelle_version(bd, ctx, p, doc: Document, numero: int, nom: str, extension: str,
-                      donnees: bytes) -> VersionDocument:
+def _nouvelle_version(
+    bd, ctx, p, doc: Document, numero: int, nom: str, extension: str, donnees: bytes
+) -> VersionDocument:
     version = VersionDocument(
         document_id=doc.id,
         numero_version=numero,
@@ -229,17 +243,34 @@ def _nouvelle_version(bd, ctx, p, doc: Document, numero: int, nom: str, extensio
     bd.add(version)
     doc.version_courante = numero
     bd.flush()
-    historiser(bd, ctx, "document", doc.id, "DEPOT_VERSION",
-               {"version": numero, "sha256": version.sha256, "analyse": version.statut_analyse})
-    audit.enregistrer_ctx(bd, ctx, "DOCUMENT_DEPOT", type_ressource="document", ressource_id=doc.id,
-                          unite_id=doc.unite_id,
-                          details={"version": numero, "sha256": version.sha256, "taille": version.taille,
-                                   "analyse": version.statut_analyse})
+    historiser(
+        bd,
+        ctx,
+        "document",
+        doc.id,
+        "DEPOT_VERSION",
+        {"version": numero, "sha256": version.sha256, "analyse": version.statut_analyse},
+    )
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "DOCUMENT_DEPOT",
+        type_ressource="document",
+        ressource_id=doc.id,
+        unite_id=doc.unite_id,
+        details={
+            "version": numero,
+            "sha256": version.sha256,
+            "taille": version.taille,
+            "analyse": version.statut_analyse,
+        },
+    )
     return version
 
 
-def deposer_version(bd: SessionBD, ctx: Contexte, p: ParametresServeur, document_id: str, nom_fichier: str,
-                    donnees: bytes) -> dict:
+def deposer_version(
+    bd: SessionBD, ctx: Contexte, p: ParametresServeur, document_id: str, nom_fichier: str, donnees: bytes
+) -> dict:
     ctx.exiger(Permission.DOCUMENT_AJOUTER)
     doc = _obtenir(bd, ctx, document_id)
     nom, extension = valider_fichier(bd, nom_fichier, donnees)
@@ -256,11 +287,17 @@ def _obtenir(bd: SessionBD, ctx: Contexte, document_id: str) -> Document:
     return doc
 
 
-def lister(bd: SessionBD, ctx: Contexte, plainte_id: str | None, dossier_id: str | None,
-           personne_id: str | None) -> list[dict]:
+def lister(
+    bd: SessionBD, ctx: Contexte, plainte_id: str | None, dossier_id: str | None, personne_id: str | None
+) -> list[dict]:
     ctx.exiger(Permission.DOCUMENT_LIRE)
-    meta = schemas.MetadonneesDocument(intitule="filtre", type_piece=TypePiece.AUTRE, plainte_id=plainte_id,
-                                       dossier_id=dossier_id, personne_id=personne_id)
+    meta = schemas.MetadonneesDocument(
+        intitule="filtre",
+        type_piece=TypePiece.AUTRE,
+        plainte_id=plainte_id,
+        dossier_id=dossier_id,
+        personne_id=personne_id,
+    )
     _parent_accessible(bd, ctx, meta)
     requete = select(Document).order_by(Document.cree_le)
     if plainte_id:
@@ -272,8 +309,9 @@ def lister(bd: SessionBD, ctx: Contexte, plainte_id: str | None, dossier_id: str
     return [serialiser(d) for d in bd.execute(requete).scalars()]
 
 
-def telecharger(bd: SessionBD, ctx: Contexte, p: ParametresServeur, document_id: str,
-                numero_version: int | None = None) -> tuple[str, str, bytes]:
+def telecharger(
+    bd: SessionBD, ctx: Contexte, p: ParametresServeur, document_id: str, numero_version: int | None = None
+) -> tuple[str, str, bytes]:
     ctx.exiger(Permission.DOCUMENT_LIRE)
     doc = _obtenir(bd, ctx, document_id)
     numero = numero_version or doc.version_courante
@@ -281,8 +319,15 @@ def telecharger(bd: SessionBD, ctx: Contexte, p: ParametresServeur, document_id:
     if version is None:
         raise Introuvable("Version introuvable.")
     if version.statut_analyse != StatutAnalyse.SAIN:
-        audit.enregistrer_ctx(bd, ctx, "DOCUMENT_TELECHARGEMENT", resultat="REFUS", type_ressource="document",
-                              ressource_id=doc.id, details={"raison": f"analyse_{version.statut_analyse}"})
+        audit.enregistrer_ctx(
+            bd,
+            ctx,
+            "DOCUMENT_TELECHARGEMENT",
+            resultat="REFUS",
+            type_ressource="document",
+            ressource_id=doc.id,
+            details={"raison": f"analyse_{version.statut_analyse}"},
+        )
         bd.commit()
         raise Conflit("Cette pièce n'est pas disponible : l'analyse antivirus n'a pas confirmé son innocuité.")
     chemin = p.repertoire_stockage / version.chemin_stockage
@@ -293,19 +338,29 @@ def telecharger(bd: SessionBD, ctx: Contexte, p: ParametresServeur, document_id:
     except ErreurChiffrement:
         donnees = None
     if donnees is None or hashlib.sha256(donnees).hexdigest() != version.sha256:
-        audit.enregistrer_ctx(bd, ctx, "DOCUMENT_INTEGRITE", resultat="ECHEC", type_ressource="document",
-                              ressource_id=doc.id)
+        audit.enregistrer_ctx(
+            bd, ctx, "DOCUMENT_INTEGRITE", resultat="ECHEC", type_ressource="document", ressource_id=doc.id
+        )
         bd.commit()
         raise ErreurMetier("Échec du contrôle d'intégrité de la pièce. Contactez l'administration.")
-    audit.enregistrer_ctx(bd, ctx, "DOCUMENT_TELECHARGEMENT", type_ressource="document", ressource_id=doc.id,
-                          unite_id=doc.unite_id, details={"version": numero, "sha256": version.sha256})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "DOCUMENT_TELECHARGEMENT",
+        type_ressource="document",
+        ressource_id=doc.id,
+        unite_id=doc.unite_id,
+        details={"version": numero, "sha256": version.sha256},
+    )
     return version.nom_fichier, version.type_mime, donnees
 
 
 def reanalyser_en_erreur(bd: SessionBD, p: ParametresServeur) -> dict:
     """Relance l'analyse des versions dont l'analyse a echoue (antivirus indisponible)."""
     compte = {"analysees": 0, "saines": 0, "infectees": 0, "erreurs": 0}
-    for version in bd.execute(select(VersionDocument).where(VersionDocument.statut_analyse == StatutAnalyse.ERREUR)).scalars():
+    for version in bd.execute(
+        select(VersionDocument).where(VersionDocument.statut_analyse == StatutAnalyse.ERREUR)
+    ).scalars():
         chemin = p.repertoire_stockage / version.chemin_stockage
         donnees = chiffreur().dechiffrer_octets(version.cle_id, chemin.read_bytes())
         resultat = creer_analyseur(p).analyser(donnees)

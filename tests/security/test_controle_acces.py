@@ -15,9 +15,16 @@ def _une_plainte(client, h):
 
 
 def test_acces_sans_authentification_refuse(client, donnees):
-    for methode, chemin in [("get", "/plaintes"), ("get", "/personnes"), ("get", "/audit"), ("get", "/utilisateurs"),
-                            ("post", "/recherche"), ("get", "/statistiques/tableau-de-bord"),
-                            ("get", "/carte/donnees"), ("get", "/dossiers")]:
+    for methode, chemin in [
+        ("get", "/plaintes"),
+        ("get", "/personnes"),
+        ("get", "/audit"),
+        ("get", "/utilisateurs"),
+        ("post", "/recherche"),
+        ("get", "/statistiques/tableau-de-bord"),
+        ("get", "/carte/donnees"),
+        ("get", "/dossiers"),
+    ]:
         r = getattr(client, methode)(f"{API}{chemin}")
         assert r.status_code == 401, chemin
 
@@ -36,7 +43,9 @@ def test_admin_technique_sans_acces_aux_dossiers(client, connexions, chemin):
 def test_admin_fonctionnel_sans_acces_aux_donnees_operationnelles(client, connexions):
     h = connexions.entetes("admin.fonctionnel", FINALITE)
     assert client.get(f"{API}/plaintes", headers=h).status_code == 403
-    assert client.post(f"{API}/recherche", headers=h, json={"finalite": "Curiosité", "nom": "ABAKAR"}).status_code == 403
+    assert (
+        client.post(f"{API}/recherche", headers=h, json={"finalite": "Curiosité", "nom": "ABAKAR"}).status_code == 403
+    )
     assert client.get(f"{API}/audit", headers=h).status_code == 403
 
 
@@ -45,9 +54,17 @@ def test_agent_accueil_sans_biometrie(client, connexions):
     personne = client.get(f"{API}/personnes", headers=h_off, params={"taille": 1}).json()["elements"][0]
     h = connexions.entetes("accueil.ndj", FINALITE)
     assert client.get(f"{API}/biometrie/personnes/{personne['id']}/captures", headers=h).status_code == 403
-    r = client.post(f"{API}/biometrie/captures", headers=h, json={
-        "personne_id": personne["id"], "position_doigt": "INDEX_DROIT", "equipement": "Capteur simulé",
-        "fondement_legal": "Fondement fictif de test", "consentement_recueilli": True})
+    r = client.post(
+        f"{API}/biometrie/captures",
+        headers=h,
+        json={
+            "personne_id": personne["id"],
+            "position_doigt": "INDEX_DROIT",
+            "equipement": "Capteur simulé",
+            "fondement_legal": "Fondement fictif de test",
+            "consentement_recueilli": True,
+        },
+    )
     assert r.status_code == 403
 
 
@@ -55,8 +72,14 @@ def test_auditeur_ne_peut_pas_modifier(client, connexions):
     h = connexions.entetes("auditeur")
     assert client.get(f"{API}/audit", headers=h).status_code == 200
     assert client.get(f"{API}/plaintes", headers=h).status_code == 403
-    assert client.post(f"{API}/plaintes", headers=h, json={
-        "service_enregistrement": "x" * 5, "description": "Tentative de création par un auditeur"}).status_code == 403
+    assert (
+        client.post(
+            f"{API}/plaintes",
+            headers=h,
+            json={"service_enregistrement": "x" * 5, "description": "Tentative de création par un auditeur"},
+        ).status_code
+        == 403
+    )
 
 
 def test_consultation_seule_ne_peut_pas_ecrire(client, connexions):
@@ -64,8 +87,14 @@ def test_consultation_seule_ne_peut_pas_ecrire(client, connexions):
     p = _une_plainte(client, h)
     r = client.patch(f"{API}/plaintes/{p['id']}", headers=h, json={"version": p["version"], "lieu_faits": "x"})
     assert r.status_code == 403
-    assert client.post(f"{API}/plaintes", headers=h, json={
-        "service_enregistrement": "Accueil", "description": "Tentative en lecture seule"}).status_code == 403
+    assert (
+        client.post(
+            f"{API}/plaintes",
+            headers=h,
+            json={"service_enregistrement": "Accueil", "description": "Tentative en lecture seule"},
+        ).status_code
+        == 403
+    )
 
 
 def test_separation_des_donnees_entre_unites(client, connexions):
@@ -78,8 +107,9 @@ def test_separation_des_donnees_entre_unites(client, connexions):
     # Acces direct par identifiant : refuse sans revelation d'existence.
     r = client.get(f"{API}/plaintes/{cible['id']}", headers=h_ndj)
     assert r.status_code == 404
-    r = client.patch(f"{API}/plaintes/{cible['id']}", headers=h_ndj,
-                     json={"version": cible["version"], "lieu_faits": "intrusion"})
+    r = client.patch(
+        f"{API}/plaintes/{cible['id']}", headers=h_ndj, json={"version": cible["version"], "lieu_faits": "intrusion"}
+    )
     assert r.status_code == 404
     r = client.get(f"{API}/plaintes/{cible['id']}/fiche.pdf", headers=h_ndj)
     assert r.status_code == 404
@@ -87,8 +117,9 @@ def test_separation_des_donnees_entre_unites(client, connexions):
     r = client.get(f"{API}/plaintes", headers=h_ndj, params={"unite_id": cible["unite_id"]})
     assert r.json()["total"] == 0
     # Le numero exact ne revele pas une plainte hors perimetre.
-    r = client.post(f"{API}/recherche", headers=h_ndj,
-                    json={"finalite": "Test de cloisonnement", "numero_plainte": cible["numero"]})
+    r = client.post(
+        f"{API}/recherche", headers=h_ndj, json={"finalite": "Test de cloisonnement", "numero_plainte": cible["numero"]}
+    )
     assert r.json()["resultats"]["plaintes"] == []
 
 
@@ -96,17 +127,28 @@ def test_creation_pour_une_autre_unite_refusee(client, connexions):
     h_abc = connexions.entetes("officier.abc")
     unite_abc = client.get(f"{API}/plaintes", headers=h_abc, params={"taille": 1}).json()["elements"][0]["unite_id"]
     h_ndj = connexions.entetes("accueil.ndj")
-    r = client.post(f"{API}/plaintes", headers=h_ndj, json={
-        "service_enregistrement": "Accueil", "description": "Tentative d'écriture hors périmètre",
-        "unite_id": unite_abc})
+    r = client.post(
+        f"{API}/plaintes",
+        headers=h_ndj,
+        json={
+            "service_enregistrement": "Accueil",
+            "description": "Tentative d'écriture hors périmètre",
+            "unite_id": unite_abc,
+        },
+    )
     assert r.status_code == 403
 
 
 def test_responsable_voit_unites_subordonnees(client, connexions):
     h_a1 = connexions.entetes("accueil.ndj.a1")
-    cree = client.post(f"{API}/plaintes", headers=h_a1, json={
-        "service_enregistrement": "Accueil arrondissement",
-        "description": "Plainte fictive enregistrée dans l'arrondissement."}).json()
+    cree = client.post(
+        f"{API}/plaintes",
+        headers=h_a1,
+        json={
+            "service_enregistrement": "Accueil arrondissement",
+            "description": "Plainte fictive enregistrée dans l'arrondissement.",
+        },
+    ).json()
     h_resp = connexions.entetes("responsable.ndj")
     assert client.get(f"{API}/plaintes/{cree['id']}", headers=h_resp).status_code == 200
     # L'agent de l'arrondissement ne voit pas les plaintes du commissariat central.
@@ -127,8 +169,9 @@ def test_enqueteur_limite_aux_dossiers_attribues(client, connexions):
     # L'enqueteur ne peut pas se reattribuer un dossier.
     if attribues:
         d = attribues[0]
-        r = client.patch(f"{API}/dossiers/{d['id']}", headers=h_enq,
-                         json={"version": d["version"], "enqueteur_id": None})
+        r = client.patch(
+            f"{API}/dossiers/{d['id']}", headers=h_enq, json={"version": d["version"], "enqueteur_id": None}
+        )
         assert r.status_code == 403
 
 
@@ -145,14 +188,15 @@ def test_consultation_personne_exige_finalite(client, connexions):
 
 def test_recherche_nationale_reservee(client, connexions):
     h = connexions.entetes("officier.ndj")
-    r = client.post(f"{API}/recherche", headers=h,
-                    json={"finalite": "Test de portée", "nom": "ABAKAR", "etendre_national": True})
+    r = client.post(
+        f"{API}/recherche", headers=h, json={"finalite": "Test de portée", "nom": "ABAKAR", "etendre_national": True}
+    )
     assert r.status_code == 403
 
 
 def test_injection_sql_inoperante(client, connexions):
     h = connexions.entetes("officier.ndj", FINALITE)
-    for charge in ["' OR '1'='1", "%'; DROP TABLE plaintes; --", "\" OR 1=1 --"]:
+    for charge in ["' OR '1'='1", "%'; DROP TABLE plaintes; --", '" OR 1=1 --']:
         r = client.get(f"{API}/plaintes", headers=h, params={"numero": charge})
         assert r.status_code == 200 and r.json()["total"] == 0
         r = client.get(f"{API}/personnes", headers=h, params={"texte": charge})
@@ -168,8 +212,11 @@ def test_elevation_privileges_par_attribution_role_refusee(client, connexions):
     utilisateurs = client.get(f"{API}/utilisateurs", headers=h, params={"texte": "accueil.abc"}).json()["elements"]
     cible = utilisateurs[0]
     # Attribution d'un role privilegie : demande de double validation, pas d'effet immediat.
-    r = client.post(f"{API}/utilisateurs/{cible['id']}/role", headers=h,
-                    json={"role_id": roles["ADMIN_FONCTIONNEL"]["id"], "motif": "Demande de test de privilège"})
+    r = client.post(
+        f"{API}/utilisateurs/{cible['id']}/role",
+        headers=h,
+        json={"role_id": roles["ADMIN_FONCTIONNEL"]["id"], "motif": "Demande de test de privilège"},
+    )
     assert r.status_code == 200
     assert r.json()["statut"] == "EN_ATTENTE"
     demande = r.json()["demande_validation"]
@@ -180,8 +227,11 @@ def test_elevation_privileges_par_attribution_role_refusee(client, connexions):
     assert apres["role_id"] == cible["role_id"]
     # Un compte ne peut pas modifier son propre role.
     moi = client.get(f"{API}/auth/moi", headers=h).json()
-    r = client.post(f"{API}/utilisateurs/{moi['id']}/role", headers=h,
-                    json={"role_id": roles["AUDITEUR"]["id"], "motif": "Auto attribution interdite"})
+    r = client.post(
+        f"{API}/utilisateurs/{moi['id']}/role",
+        headers=h,
+        json={"role_id": roles["AUDITEUR"]["id"], "motif": "Auto attribution interdite"},
+    )
     assert r.status_code == 403
 
 

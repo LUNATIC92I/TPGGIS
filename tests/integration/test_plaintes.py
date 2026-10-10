@@ -37,9 +37,16 @@ def test_creation_plainte_numero_unique_et_statut_initial(client, connexions):
 
 def test_creation_avec_personnes_et_roles(client, connexions):
     h = connexions.entetes("officier.ndj")
-    personne = client.post(f"{API}/personnes", headers=h, json={
-        "nom": "TESTNOM", "prenoms": "Unique", "date_naissance": "1990-05-04", "confirmer_malgre_doublons": True,
-    }).json()
+    personne = client.post(
+        f"{API}/personnes",
+        headers=h,
+        json={
+            "nom": "TESTNOM",
+            "prenoms": "Unique",
+            "date_naissance": "1990-05-04",
+            "confirmer_malgre_doublons": True,
+        },
+    ).json()
     r = _nouvelle_plainte(client, h, personnes=[{"personne_id": personne["id"], "role": "PLAIGNANT"}])
     assert r.status_code == 201
     detail = client.get(f"{API}/plaintes/{r.json()['id']}", headers=h).json()
@@ -62,8 +69,9 @@ def test_validation_entrees(client, connexions):
 def test_modification_avec_controle_de_version(client, connexions):
     h = connexions.entetes("officier.ndj")
     p = _nouvelle_plainte(client, h).json()
-    r = client.patch(f"{API}/plaintes/{p['id']}", headers=h,
-                     json={"version": p["version"], "lieu_faits": "Nouveau lieu fictif"})
+    r = client.patch(
+        f"{API}/plaintes/{p['id']}", headers=h, json={"version": p["version"], "lieu_faits": "Nouveau lieu fictif"}
+    )
     assert r.status_code == 200, r.text
     assert r.json()["version"] == p["version"] + 1
     # Une seconde modification fondee sur l'ancienne version est refusee.
@@ -78,15 +86,20 @@ def test_modification_avec_controle_de_version(client, connexions):
 def test_cloture_exige_motif_et_habilitation(client, connexions):
     h_accueil = connexions.entetes("accueil.ndj")
     p = _nouvelle_plainte(client, h_accueil).json()
-    r = client.post(f"{API}/plaintes/{p['id']}/statut", headers=h_accueil,
-                    json={"version": p["version"], "statut": "CLOTUREE", "motif": "Motif suffisamment long"})
+    r = client.post(
+        f"{API}/plaintes/{p['id']}/statut",
+        headers=h_accueil,
+        json={"version": p["version"], "statut": "CLOTUREE", "motif": "Motif suffisamment long"},
+    )
     assert r.status_code == 403
     h = connexions.entetes("officier.ndj")
-    r = client.post(f"{API}/plaintes/{p['id']}/statut", headers=h,
-                    json={"version": p["version"], "statut": "CLOTUREE"})
+    r = client.post(f"{API}/plaintes/{p['id']}/statut", headers=h, json={"version": p["version"], "statut": "CLOTUREE"})
     assert r.status_code == 422
-    r = client.post(f"{API}/plaintes/{p['id']}/statut", headers=h,
-                    json={"version": p["version"], "statut": "CLOTUREE", "motif": "Désistement écrit du plaignant"})
+    r = client.post(
+        f"{API}/plaintes/{p['id']}/statut",
+        headers=h,
+        json={"version": p["version"], "statut": "CLOTUREE", "motif": "Désistement écrit du plaignant"},
+    )
     assert r.status_code == 200, r.text
     assert r.json()["statut"] == "CLOTUREE"
     # Une plainte cloturee n'est plus modifiable.
@@ -97,14 +110,21 @@ def test_cloture_exige_motif_et_habilitation(client, connexions):
 def test_transitions_interdites_et_transmission(client, connexions):
     h = connexions.entetes("officier.ndj")
     p = _nouvelle_plainte(client, h).json()
-    r = client.post(f"{API}/plaintes/{p['id']}/statut", headers=h,
-                    json={"version": p["version"], "statut": "ARCHIVEE", "motif": "Archivage direct interdit"})
+    r = client.post(
+        f"{API}/plaintes/{p['id']}/statut",
+        headers=h,
+        json={"version": p["version"], "statut": "ARCHIVEE", "motif": "Archivage direct interdit"},
+    )
     assert r.status_code == 422
-    r = client.post(f"{API}/plaintes/{p['id']}/statut", headers=h,
-                    json={"version": p["version"], "statut": "TRANSMISE"})
+    r = client.post(
+        f"{API}/plaintes/{p['id']}/statut", headers=h, json={"version": p["version"], "statut": "TRANSMISE"}
+    )
     assert r.status_code == 422
-    r = client.post(f"{API}/plaintes/{p['id']}/statut", headers=h,
-                    json={"version": p["version"], "statut": "TRANSMISE", "service_destinataire": "Parquet fictif"})
+    r = client.post(
+        f"{API}/plaintes/{p['id']}/statut",
+        headers=h,
+        json={"version": p["version"], "statut": "TRANSMISE", "service_destinataire": "Parquet fictif"},
+    )
     assert r.status_code == 200
 
 
@@ -113,7 +133,9 @@ def test_recherche_par_numero(client, connexions):
     p = _nouvelle_plainte(client, h).json()
     liste = client.get(f"{API}/plaintes", headers=h, params={"numero": p["numero"]}).json()
     assert liste["total"] == 1 and liste["elements"][0]["id"] == p["id"]
-    r = client.post(f"{API}/recherche", headers=h, json={"finalite": "Vérification test", "numero_plainte": p["numero"]})
+    r = client.post(
+        f"{API}/recherche", headers=h, json={"finalite": "Vérification test", "numero_plainte": p["numero"]}
+    )
     assert r.status_code == 200
     resultat = r.json()
     assert resultat["resultats"]["plaintes"][0]["niveau"] == "EXACT"

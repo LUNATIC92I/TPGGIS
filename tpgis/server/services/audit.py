@@ -30,6 +30,8 @@ def _cle_interdite(cle: str) -> bool:
     if _FRAGMENTS_INTERDITS.search(cle):
         return True
     return any(mot in _MOTS_INTERDITS for mot in cle.lower().split("_"))
+
+
 _TAILLE_MAX_VALEUR = 500
 
 

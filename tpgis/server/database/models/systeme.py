@@ -173,4 +173,3 @@ class MetadonneeInstance(Base):
 
     cle: Mapped[str] = mapped_column(String(64), primary_key=True)
     valeur: Mapped[str] = mapped_column(String(255), nullable=False)
-

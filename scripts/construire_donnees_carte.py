@@ -64,7 +64,7 @@ def douglas_peucker(points: list, tolerance: float) -> list:
         if dmax > tolerance:
             garder[indice] = True
             pile.extend([(debut, indice), (indice, fin)])
-    return [p for p, g in zip(points, garder) if g]
+    return [p for p, g in zip(points, garder, strict=False) if g]
 
 
 def simplifier_anneau(anneau: list) -> list:
@@ -78,8 +78,10 @@ def simplifier_geometrie(g: dict) -> dict:
     if g["type"] == "Polygon":
         return {"type": "Polygon", "coordinates": [simplifier_anneau(a) for a in g["coordinates"]]}
     if g["type"] == "MultiPolygon":
-        return {"type": "MultiPolygon",
-                "coordinates": [[simplifier_anneau(a) for a in poly] for poly in g["coordinates"]]}
+        return {
+            "type": "MultiPolygon",
+            "coordinates": [[simplifier_anneau(a) for a in poly] for poly in g["coordinates"]],
+        }
     raise ValueError(g["type"])
 
 
@@ -110,11 +112,16 @@ def main(sources: Path) -> None:
     lieux = json.loads((sources / "ne_10m_populated_places_simple.geojson").read_text())
 
     frontiere = next(f for f in pays["features"] if f["properties"].get("ADM0_A3") == "TCD")
-    frontiere_geo = {"type": "FeatureCollection", "features": [{
-        "type": "Feature",
-        "properties": {"nom": "République du Tchad", "code": "TD"},
-        "geometry": simplifier_geometrie(frontiere["geometry"]),
-    }]}
+    frontiere_geo = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {"nom": "République du Tchad", "code": "TD"},
+                "geometry": simplifier_geometrie(frontiere["geometry"]),
+            }
+        ],
+    }
 
     provinces = []
     for f in adm1["features"]:
@@ -122,12 +129,14 @@ def main(sources: Path) -> None:
         if pr.get("adm0_a3") != "TCD":
             continue
         code = CORRECTIONS_CODES.get(pr["iso_3166_2"], pr["iso_3166_2"])
-        provinces.append({
-            "type": "Feature",
-            "properties": {"code": code, "nom": CORRECTIONS_NOMS.get(code, pr["name"])},
-            "geometry": simplifier_geometrie(f["geometry"]),
-            "_brut": f["geometry"],
-        })
+        provinces.append(
+            {
+                "type": "Feature",
+                "properties": {"code": code, "nom": CORRECTIONS_NOMS.get(code, pr["name"])},
+                "geometry": simplifier_geometrie(f["geometry"]),
+                "_brut": f["geometry"],
+            }
+        )
     provinces.sort(key=lambda f: f["properties"]["nom"])
 
     villes = []
@@ -137,17 +146,20 @@ def main(sources: Path) -> None:
             continue
         x, y = f["geometry"]["coordinates"]
         code = CORRECTIONS_VILLES.get(pr["name"]) or next(
-            (p["properties"]["code"] for p in provinces if point_dans_geometrie(x, y, p["_brut"])), None)
-        villes.append({
-            "type": "Feature",
-            "properties": {
-                "nom": pr["name"],
-                "province_code": code,
-                "population_estimee": pr.get("pop_max"),
-                "capitale": pr.get("featurecla") == "Admin-0 capital",
-            },
-            "geometry": {"type": "Point", "coordinates": [round(x, 4), round(y, 4)]},
-        })
+            (p["properties"]["code"] for p in provinces if point_dans_geometrie(x, y, p["_brut"])), None
+        )
+        villes.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "nom": pr["name"],
+                    "province_code": code,
+                    "population_estimee": pr.get("pop_max"),
+                    "capitale": pr.get("featurecla") == "Admin-0 capital",
+                },
+                "geometry": {"type": "Point", "coordinates": [round(x, 4), round(y, 4)]},
+            }
+        )
     villes.sort(key=lambda f: -(f["properties"]["population_estimee"] or 0))
     for p in provinces:
         del p["_brut"]
@@ -162,22 +174,29 @@ def main(sources: Path) -> None:
         texte = json.dumps(contenu, ensure_ascii=False, separators=(",", ":"))
         (CIBLE / nom).write_text(texte, encoding="utf-8")
         empreintes[nom] = hashlib.sha256(texte.encode()).hexdigest()
-    (CIBLE / "SOURCES.json").write_text(json.dumps({
-        "source": "Natural Earth 10m (admin 0, admin 1, populated places simple)",
-        "url": "https://www.naturalearthdata.com",
-        "depot": "https://github.com/nvkelso/natural-earth-vector",
-        "licence": "Domaine public (Natural Earth Terms of Use)",
-        "construit_le": date.today().isoformat(),
-        "tolerance_simplification_degres": TOLERANCE,
-        "limites_connues": [
-            "La source regroupe Ennedi-Est et Ennedi-Ouest en une seule unité (22 unités au lieu de 23).",
-            "Rattachement de Moundou corrigé manuellement (TD-LO) : point source en limite de province.",
-            "Populations : estimations Natural Earth, à usage d'affichage uniquement.",
-            "Les limites sont indicatives et ne font pas foi : à remplacer par les données officielles "
-            "de l'administration territoriale tchadienne dès leur validation.",
-        ],
-        "sha256": empreintes,
-    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    (CIBLE / "SOURCES.json").write_text(
+        json.dumps(
+            {
+                "source": "Natural Earth 10m (admin 0, admin 1, populated places simple)",
+                "url": "https://www.naturalearthdata.com",
+                "depot": "https://github.com/nvkelso/natural-earth-vector",
+                "licence": "Domaine public (Natural Earth Terms of Use)",
+                "construit_le": date.today().isoformat(),
+                "tolerance_simplification_degres": TOLERANCE,
+                "limites_connues": [
+                    "La source regroupe Ennedi-Est et Ennedi-Ouest en une seule unité (22 unités au lieu de 23).",
+                    "Rattachement de Moundou corrigé manuellement (TD-LO) : point source en limite de province.",
+                    "Populations : estimations Natural Earth, à usage d'affichage uniquement.",
+                    "Les limites sont indicatives et ne font pas foi : à remplacer par les données officielles "
+                    "de l'administration territoriale tchadienne dès leur validation.",
+                ],
+                "sha256": empreintes,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     print(f"{len(provinces)} provinces, {len(villes)} villes écrites dans {CIBLE}")
 
 

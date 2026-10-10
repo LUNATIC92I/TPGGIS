@@ -88,8 +88,10 @@ class Connexions:
         return pyotp.TOTP(secret).now()
 
     def entetes(self, identifiant: str, finalite: str | None = None) -> dict:
-        r = self.client.post("/api/v1/auth/connexion", json={
-            "identifiant": identifiant, "mot_de_passe": MOT_DE_PASSE_DEMO, "code_mfa": self.code(identifiant)})
+        r = self.client.post(
+            "/api/v1/auth/connexion",
+            json={"identifiant": identifiant, "mot_de_passe": MOT_DE_PASSE_DEMO, "code_mfa": self.code(identifiant)},
+        )
         assert r.status_code == 200, r.text
         entetes = {"Authorization": f"Bearer {r.json()['jeton']}"}
         if finalite:
@@ -97,8 +99,11 @@ class Connexions:
         return entetes
 
     def reauthentifier(self, identifiant: str, entetes: dict) -> None:
-        r = self.client.post("/api/v1/auth/reauthentification", headers=entetes,
-                             json={"mot_de_passe": MOT_DE_PASSE_DEMO, "code_mfa": self.code(identifiant)})
+        r = self.client.post(
+            "/api/v1/auth/reauthentification",
+            headers=entetes,
+            json={"mot_de_passe": MOT_DE_PASSE_DEMO, "code_mfa": self.code(identifiant)},
+        )
         assert r.status_code == 200, r.text
 
 

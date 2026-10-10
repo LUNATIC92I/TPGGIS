@@ -93,8 +93,10 @@ def calculer_unites_accessibles(bd: SessionBD, utilisateur: Utilisateur) -> set[
 
 
 def _plaintes_assignees(ctx: Contexte):
-    return select(LienDossierPlainte.plainte_id).join(Dossier, Dossier.id == LienDossierPlainte.dossier_id).where(
-        Dossier.enqueteur_id == ctx.uid
+    return (
+        select(LienDossierPlainte.plainte_id)
+        .join(Dossier, Dossier.id == LienDossierPlainte.dossier_id)
+        .where(Dossier.enqueteur_id == ctx.uid)
     )
 
 

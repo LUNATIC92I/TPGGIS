@@ -38,43 +38,90 @@ def rechercher(bd: SessionBD, ctx: Contexte, demande: schemas.DemandeRecherche) 
 
     if demande.numero_plainte:
         if ctx.a(Permission.PLAINTE_LIRE):
-            for p in bd.execute(select(Plainte).where(Plainte.numero == demande.numero_plainte.strip().upper(),
-                                                      filtre_plaintes(ctx))).unique().scalars():
-                resultats["plaintes"].append({"id": p.id, "numero": p.numero, "statut": p.statut,
-                                              "unite": p.unite.nom, "niveau": "EXACT"})
+            for p in (
+                bd.execute(
+                    select(Plainte).where(
+                        Plainte.numero == demande.numero_plainte.strip().upper(), filtre_plaintes(ctx)
+                    )
+                )
+                .unique()
+                .scalars()
+            ):
+                resultats["plaintes"].append(
+                    {"id": p.id, "numero": p.numero, "statut": p.statut, "unite": p.unite.nom, "niveau": "EXACT"}
+                )
     if demande.numero_dossier:
         if ctx.a(Permission.DOSSIER_LIRE):
-            for d in bd.execute(select(Dossier).where(Dossier.numero == demande.numero_dossier.strip().upper(),
-                                                      filtre_dossiers(ctx))).unique().scalars():
-                resultats["dossiers"].append({"id": d.id, "numero": d.numero, "intitule": d.intitule,
-                                              "statut": d.statut, "niveau": "EXACT"})
+            for d in (
+                bd.execute(
+                    select(Dossier).where(
+                        Dossier.numero == demande.numero_dossier.strip().upper(), filtre_dossiers(ctx)
+                    )
+                )
+                .unique()
+                .scalars()
+            ):
+                resultats["dossiers"].append(
+                    {"id": d.id, "numero": d.numero, "intitule": d.intitule, "statut": d.statut, "niveau": "EXACT"}
+                )
     if ctx.a(Permission.PERSONNE_LIRE):
         if demande.numero_interne:
-            for p in bd.execute(select(Personne).where(
-                Personne.numero_interne == demande.numero_interne.strip().upper(),
-                filtre_personnes(ctx, recherche_nationale=demande.etendre_national),
-            )).unique().scalars():
-                ligne = {**serialiser_resume(p), "score": 100, "niveau": "EXACT",
-                         "attributs_concordants": ["numero_interne"], "ambiguites": []}
+            for p in (
+                bd.execute(
+                    select(Personne).where(
+                        Personne.numero_interne == demande.numero_interne.strip().upper(),
+                        filtre_personnes(ctx, recherche_nationale=demande.etendre_national),
+                    )
+                )
+                .unique()
+                .scalars()
+            ):
+                ligne = {
+                    **serialiser_resume(p),
+                    "score": 100,
+                    "niveau": "EXACT",
+                    "attributs_concordants": ["numero_interne"],
+                    "ambiguites": [],
+                }
                 if p.statut == StatutPersonne.FUSIONNEE:
                     ligne["ambiguites"].append("Fiche fusionnée dans une autre fiche.")
                 resultats["personnes"].append(ligne)
         if demande.nom or demande.numero_document or demande.date_naissance:
             if demande.numero_document and not demande.nom:
                 idx = index_aveugle().calculer(demande.numero_document)
-                for p in bd.execute(select(Personne).where(
-                    Personne.index_document == idx,
-                    filtre_personnes(ctx, recherche_nationale=demande.etendre_national),
-                )).unique().scalars():
-                    resultats["personnes"].append({**serialiser_resume(p), "score": 60, "niveau": "MOYEN",
-                                                   "attributs_concordants": ["numero_document"],
-                                                   "ambiguites": ["Seul le numéro de document concorde : "
-                                                                  "vérifier l'identité sur pièce."]})
+                for p in (
+                    bd.execute(
+                        select(Personne).where(
+                            Personne.index_document == idx,
+                            filtre_personnes(ctx, recherche_nationale=demande.etendre_national),
+                        )
+                    )
+                    .unique()
+                    .scalars()
+                ):
+                    resultats["personnes"].append(
+                        {
+                            **serialiser_resume(p),
+                            "score": 60,
+                            "niveau": "MOYEN",
+                            "attributs_concordants": ["numero_document"],
+                            "ambiguites": ["Seul le numéro de document concorde : vérifier l'identité sur pièce."],
+                        }
+                    )
             elif demande.nom:
-                resultats["personnes"].extend(rechercher_candidats(
-                    bd, ctx, demande.nom, demande.prenoms, demande.date_naissance, demande.lieu_naissance,
-                    demande.numero_document, seuil=25, nationale=demande.etendre_national,
-                ))
+                resultats["personnes"].extend(
+                    rechercher_candidats(
+                        bd,
+                        ctx,
+                        demande.nom,
+                        demande.prenoms,
+                        demande.date_naissance,
+                        demande.lieu_naissance,
+                        demande.numero_document,
+                        seuil=25,
+                        nationale=demande.etendre_national,
+                    )
+                )
             else:
                 raise DonneesInvalides("La date de naissance seule ne constitue pas un critère suffisant.")
 

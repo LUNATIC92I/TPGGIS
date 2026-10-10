@@ -112,8 +112,16 @@ def _env_pg(url: str) -> tuple[list[str], dict]:
     env = dict(os.environ)
     if u.password:
         env["PGPASSWORD"] = unquote(u.password)
-    args = ["-h", u.hostname or "localhost", "-p", str(u.port or 5432), "-U", unquote(u.username or ""),
-            "-d", u.path.lstrip("/")]
+    args = [
+        "-h",
+        u.hostname or "localhost",
+        "-p",
+        str(u.port or 5432),
+        "-U",
+        unquote(u.username or ""),
+        "-d",
+        u.path.lstrip("/"),
+    ]
     return args, env
 
 
@@ -143,8 +151,12 @@ def sauvegarder(p: ParametresServeur, revision_schema: str | None = None) -> Pat
             format_base = "sqlite"
         else:
             args, env = _env_pg(p.database_url)
-            resultat = subprocess.run(["pg_dump", "--format=custom", "--no-owner", "--no-privileges",
-                                       "-f", str(brut), *args], env=env, capture_output=True, text=True)
+            resultat = subprocess.run(
+                ["pg_dump", "--format=custom", "--no-owner", "--no-privileges", "-f", str(brut), *args],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
             if resultat.returncode != 0:
                 shutil.rmtree(dossier)
                 raise ErreurSauvegarde(f"pg_dump a échoué : {resultat.stderr.strip()[:500]}")
@@ -165,8 +177,10 @@ def sauvegarder(p: ParametresServeur, revision_schema: str | None = None) -> Pat
         "revision_schema": revision_schema,
         "fichiers": {
             "base.enc": {"sha256_clair": sha_base, "sha256_chiffre": _sha256_fichier(dossier / "base.enc")},
-            "stockage.tar.enc": {"sha256_clair": sha_stockage,
-                                 "sha256_chiffre": _sha256_fichier(dossier / "stockage.tar.enc")},
+            "stockage.tar.enc": {
+                "sha256_clair": sha_stockage,
+                "sha256_chiffre": _sha256_fichier(dossier / "stockage.tar.enc"),
+            },
         },
     }
     contenu = json.dumps(manifeste, indent=2, sort_keys=True).encode()
@@ -214,9 +228,21 @@ def restaurer(p: ParametresServeur, dossier: Path, *, confirmer_ecrasement: bool
             shutil.copyfile(brut, cible)
         else:
             args, env = _env_pg(p.database_url)
-            resultat = subprocess.run(["pg_restore", "--clean", "--if-exists", "--no-owner", "--no-privileges",
-                                       "--single-transaction", *args, str(brut)], env=env, capture_output=True,
-                                      text=True)
+            resultat = subprocess.run(
+                [
+                    "pg_restore",
+                    "--clean",
+                    "--if-exists",
+                    "--no-owner",
+                    "--no-privileges",
+                    "--single-transaction",
+                    *args,
+                    str(brut),
+                ],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
             if resultat.returncode != 0:
                 raise ErreurSauvegarde(f"pg_restore a échoué : {resultat.stderr.strip()[:500]}")
         archive = Path(tmp) / "stockage.tar"

@@ -34,15 +34,23 @@ def executer_hors_ligne() -> None:
 def executer_en_ligne() -> None:
     connexion_existante = config.attributes.get("connection")
     if connexion_existante is not None:
-        context.configure(connection=connexion_existante, target_metadata=cible, render_item=_rendu,
-                          render_as_batch=connexion_existante.dialect.name == "sqlite")
+        context.configure(
+            connection=connexion_existante,
+            target_metadata=cible,
+            render_item=_rendu,
+            render_as_batch=connexion_existante.dialect.name == "sqlite",
+        )
         with context.begin_transaction():
             context.run_migrations()
         return
     moteur = create_engine(_url(), poolclass=pool.NullPool)
     with moteur.connect() as connexion:
-        context.configure(connection=connexion, target_metadata=cible, render_item=_rendu,
-                          render_as_batch=connexion.dialect.name == "sqlite")
+        context.configure(
+            connection=connexion,
+            target_metadata=cible,
+            render_item=_rendu,
+            render_as_batch=connexion.dialect.name == "sqlite",
+        )
         with context.begin_transaction():
             context.run_migrations()
 

@@ -85,13 +85,72 @@ CATEGORIES = [
 ]
 
 # Listes de noms fictifs servant uniquement a generer des combinaisons aleatoires.
-NOMS = ["ABAKAR", "ADOUM", "BRAHIM", "DJIMET", "HASSANE", "KAMOUGUE", "MAHAMAT", "NGARTA", "OUSMANE",
-        "TCHERE", "YAYA", "ZAKARIA", "NODJI", "MBAIRO", "DJASRA", "GOLDOUM", "ALLAMINE", "KOULAMALLAH",
-        "NGARMBAYE", "RIMADJI", "SOUGUI", "TAHIR", "DOUTOUM", "BEASSOUM", "MOUSSA", "NDOUBA"]
-PRENOMS_M = ["Ahmat", "Ali", "Idriss", "Moussa", "Saleh", "Issa", "Djibrine", "Abdelkerim", "Ngueto", "Nadji",
-             "Rimtebaye", "Mbaiki", "Doumbe", "Haroun", "Oumar", "Hissein", "Adam", "Youssouf"]
-PRENOMS_F = ["Achta", "Fatime", "Hawa", "Khadidja", "Zenaba", "Mariam", "Ndilbe", "Neloumta", "Remadji",
-             "Asnané", "Halimé", "Kaltouma", "Djénéba", "Amina", "Mbaïrassem", "Haoua"]
+NOMS = [
+    "ABAKAR",
+    "ADOUM",
+    "BRAHIM",
+    "DJIMET",
+    "HASSANE",
+    "KAMOUGUE",
+    "MAHAMAT",
+    "NGARTA",
+    "OUSMANE",
+    "TCHERE",
+    "YAYA",
+    "ZAKARIA",
+    "NODJI",
+    "MBAIRO",
+    "DJASRA",
+    "GOLDOUM",
+    "ALLAMINE",
+    "KOULAMALLAH",
+    "NGARMBAYE",
+    "RIMADJI",
+    "SOUGUI",
+    "TAHIR",
+    "DOUTOUM",
+    "BEASSOUM",
+    "MOUSSA",
+    "NDOUBA",
+]
+PRENOMS_M = [
+    "Ahmat",
+    "Ali",
+    "Idriss",
+    "Moussa",
+    "Saleh",
+    "Issa",
+    "Djibrine",
+    "Abdelkerim",
+    "Ngueto",
+    "Nadji",
+    "Rimtebaye",
+    "Mbaiki",
+    "Doumbe",
+    "Haroun",
+    "Oumar",
+    "Hissein",
+    "Adam",
+    "Youssouf",
+]
+PRENOMS_F = [
+    "Achta",
+    "Fatime",
+    "Hawa",
+    "Khadidja",
+    "Zenaba",
+    "Mariam",
+    "Ndilbe",
+    "Neloumta",
+    "Remadji",
+    "Asnané",
+    "Halimé",
+    "Kaltouma",
+    "Djénéba",
+    "Amina",
+    "Mbaïrassem",
+    "Haoua",
+]
 
 
 @dataclass
@@ -121,38 +180,95 @@ def _unites(bd: SessionBD) -> list[Unite]:
         return list(bd.execute(select(Unite)).scalars())
     lieux = villes()
     unites: list[Unite] = []
-    dgpn = Unite(code="DGPN", nom="Direction générale de la police nationale (fictive)",
-                 type_unite=TypeUnite.DIRECTION, corps=Corps.POLICE, province_code="TD-ND", ville="N'Djamena",
-                 latitude=12.1150, longitude=15.0470, est_synthetique=True)
-    dggn = Unite(code="DGGN", nom="Direction générale de la gendarmerie nationale (fictive)",
-                 type_unite=TypeUnite.DIRECTION, corps=Corps.GENDARMERIE, province_code="TD-ND",
-                 ville="N'Djamena", latitude=12.1080, longitude=15.0390, est_synthetique=True)
+    dgpn = Unite(
+        code="DGPN",
+        nom="Direction générale de la police nationale (fictive)",
+        type_unite=TypeUnite.DIRECTION,
+        corps=Corps.POLICE,
+        province_code="TD-ND",
+        ville="N'Djamena",
+        latitude=12.1150,
+        longitude=15.0470,
+        est_synthetique=True,
+    )
+    dggn = Unite(
+        code="DGGN",
+        nom="Direction générale de la gendarmerie nationale (fictive)",
+        type_unite=TypeUnite.DIRECTION,
+        corps=Corps.GENDARMERIE,
+        province_code="TD-ND",
+        ville="N'Djamena",
+        latitude=12.1080,
+        longitude=15.0390,
+        est_synthetique=True,
+    )
     bd.add_all([dgpn, dggn])
     bd.flush()
     unites += [dgpn, dggn]
-    abreviations = {"N'Djamena": "NDJ", "Abéché": "ABC", "Moundou": "MDO", "Sarh": "SRH", "Bongor": "BGR",
-                    "Kelo": "KLO", "Pala": "PLA", "Am Timan": "AMT", "Doba": "DBA", "Mongo": "MGO", "Ati": "ATI",
-                    "Laï": "LAI", "Oum Hadjer": "OHJ", "Mao": "MAO", "Faya Largeau": "FYA", "Biltine": "BLT",
-                    "Bol": "BOL", "Fada": "FDA", "Zouar": "ZOU"}
+    abreviations = {
+        "N'Djamena": "NDJ",
+        "Abéché": "ABC",
+        "Moundou": "MDO",
+        "Sarh": "SRH",
+        "Bongor": "BGR",
+        "Kelo": "KLO",
+        "Pala": "PLA",
+        "Am Timan": "AMT",
+        "Doba": "DBA",
+        "Mongo": "MGO",
+        "Ati": "ATI",
+        "Laï": "LAI",
+        "Oum Hadjer": "OHJ",
+        "Mao": "MAO",
+        "Faya Largeau": "FYA",
+        "Biltine": "BLT",
+        "Bol": "BOL",
+        "Fada": "FDA",
+        "Zouar": "ZOU",
+    }
     for v in lieux:
         abr = abreviations.get(v["nom"], normaliser_texte(v["nom"])[:3])
-        cp = Unite(code=f"CP-{abr}", nom=f"Commissariat {_de(v['nom'])} (fictif)",
-                   type_unite=TypeUnite.COMMISSARIAT_CENTRAL if v["capitale"] else TypeUnite.COMMISSARIAT,
-                   corps=Corps.POLICE, parent_id=dgpn.id, province_code=v["province_code"], ville=v["nom"],
-                   latitude=round(v["latitude"] + 0.006, 4), longitude=round(v["longitude"] - 0.006, 4),
-                   est_synthetique=True)
-        bg = Unite(code=f"BG-{abr}", nom=f"Brigade de gendarmerie {_de(v['nom'])} (fictive)",
-                   type_unite=TypeUnite.BRIGADE, corps=Corps.GENDARMERIE, parent_id=dggn.id,
-                   province_code=v["province_code"], ville=v["nom"], latitude=round(v["latitude"] - 0.006, 4),
-                   longitude=round(v["longitude"] + 0.006, 4), est_synthetique=True)
+        cp = Unite(
+            code=f"CP-{abr}",
+            nom=f"Commissariat {_de(v['nom'])} (fictif)",
+            type_unite=TypeUnite.COMMISSARIAT_CENTRAL if v["capitale"] else TypeUnite.COMMISSARIAT,
+            corps=Corps.POLICE,
+            parent_id=dgpn.id,
+            province_code=v["province_code"],
+            ville=v["nom"],
+            latitude=round(v["latitude"] + 0.006, 4),
+            longitude=round(v["longitude"] - 0.006, 4),
+            est_synthetique=True,
+        )
+        bg = Unite(
+            code=f"BG-{abr}",
+            nom=f"Brigade de gendarmerie {_de(v['nom'])} (fictive)",
+            type_unite=TypeUnite.BRIGADE,
+            corps=Corps.GENDARMERIE,
+            parent_id=dggn.id,
+            province_code=v["province_code"],
+            ville=v["nom"],
+            latitude=round(v["latitude"] - 0.006, 4),
+            longitude=round(v["longitude"] + 0.006, 4),
+            est_synthetique=True,
+        )
         bd.add_all([cp, bg])
         unites += [cp, bg]
     bd.flush()
     # Un commissariat d'arrondissement subordonne pour illustrer la hierarchie.
     central = next(u for u in unites if u.code == "CP-NDJ")
-    arr = Unite(code="CP-NDJ-A1", nom="Commissariat du 1er arrondissement de N'Djamena (fictif)",
-                type_unite=TypeUnite.COMMISSARIAT, corps=Corps.POLICE, parent_id=central.id, province_code="TD-ND",
-                ville="N'Djamena", latitude=12.1300, longitude=15.0550, est_synthetique=True)
+    arr = Unite(
+        code="CP-NDJ-A1",
+        nom="Commissariat du 1er arrondissement de N'Djamena (fictif)",
+        type_unite=TypeUnite.COMMISSARIAT,
+        corps=Corps.POLICE,
+        parent_id=central.id,
+        province_code="TD-ND",
+        ville="N'Djamena",
+        latitude=12.1300,
+        longitude=15.0550,
+        est_synthetique=True,
+    )
     bd.add(arr)
     bd.flush()
     unites.append(arr)
@@ -183,10 +299,21 @@ def _utilisateurs(bd: SessionBD, unites: dict[str, Unite]) -> dict[str, Utilisat
             resultat[ident] = existant
             continue
         role = roles[code_role]
-        u = Utilisateur(identifiant=ident, nom=f"{nom} (FICTIF)", prenoms=prenom, grade=grade,
-                        matricule=f"DEMO-{len(resultat) + 1:04d}", unite_id=unites[code_unite].id, role_id=role.id,
-                        portee=role.portee_defaut, mot_de_passe_hash=empreinte, doit_changer_mot_de_passe=False,
-                        mot_de_passe_modifie_le=datetime.now(UTC), actif=True, est_synthetique=True)
+        u = Utilisateur(
+            identifiant=ident,
+            nom=f"{nom} (FICTIF)",
+            prenoms=prenom,
+            grade=grade,
+            matricule=f"DEMO-{len(resultat) + 1:04d}",
+            unite_id=unites[code_unite].id,
+            role_id=role.id,
+            portee=role.portee_defaut,
+            mot_de_passe_hash=empreinte,
+            doit_changer_mot_de_passe=False,
+            mot_de_passe_modifie_le=datetime.now(UTC),
+            actif=True,
+            est_synthetique=True,
+        )
         if ident in SECRETS_TOTP_DEMO:
             u.mfa_secret = SECRETS_TOTP_DEMO[ident]
             u.mfa_active = True
@@ -200,8 +327,13 @@ def _categories(bd: SessionBD) -> list[CategorieFait]:
     existantes = {c.code: c for c in bd.execute(select(CategorieFait)).scalars()}
     for code, libelle in CATEGORIES:
         if code not in existantes:
-            c = CategorieFait(code=code, libelle=libelle, active=True, validee=False,
-                              description="Catégorie d'exemple, à valider par les autorités compétentes.")
+            c = CategorieFait(
+                code=code,
+                libelle=libelle,
+                active=True,
+                validee=False,
+                description="Catégorie d'exemple, à valider par les autorités compétentes.",
+            )
             bd.add(c)
             existantes[code] = c
     bd.flush()
@@ -221,15 +353,26 @@ def _personne_aleatoire(r: random.Random, numero: int, unite: Unite, createur: U
     lieu = r.choice([v["nom"] for v in villes()]) if r.random() < 0.7 else None
     return Personne(
         numero_interne=f"P-{date.today().year}-{numero:06d}",
-        nom=nom, prenoms=prenoms, nom_normalise=normaliser_texte(f"{nom} {prenoms}"),
-        date_naissance=naissance, lieu_naissance=lieu, nationalite="Tchadienne" if r.random() < 0.9 else None,
+        nom=nom,
+        prenoms=prenoms,
+        nom_normalise=normaliser_texte(f"{nom} {prenoms}"),
+        date_naissance=naissance,
+        lieu_naissance=lieu,
+        nationalite="Tchadienne" if r.random() < 0.9 else None,
         sexe="F" if feminin else "M",
-        coordonnees={"telephone": f"+235 6{r.randint(0, 9)} {r.randint(10, 99)} {r.randint(10, 99)} "
-                                  f"{r.randint(10, 99)} (fictif)"} if r.random() < 0.6 else None,
-        type_document="CARTE_NATIONALE" if doc else None, numero_document=doc,
+        coordonnees={
+            "telephone": f"+235 6{r.randint(0, 9)} {r.randint(10, 99)} {r.randint(10, 99)} {r.randint(10, 99)} (fictif)"
+        }
+        if r.random() < 0.6
+        else None,
+        type_document="CARTE_NATIONALE" if doc else None,
+        numero_document=doc,
         index_document=index_aveugle().calculer(doc),
         statut_verification=r.choice(list(StatutVerificationIdentite)),
-        unite_creation_id=unite.id, cree_par_id=createur.id, statut=StatutPersonne.ACTIVE, est_synthetique=True,
+        unite_creation_id=unite.id,
+        cree_par_id=createur.id,
+        statut=StatutPersonne.ACTIVE,
+        est_synthetique=True,
     )
 
 
@@ -266,8 +409,9 @@ def generer(bd: SessionBD, p: ParametresServeur, volumes: Volumes | None = None,
     createur_defaut = utilisateurs["officier.ndj"]
 
     # Unites ponderees : plus d'activite dans les grandes villes.
-    poids = [6 if u.ville == "N'Djamena" else 2 if u.ville in ("Moundou", "Abéché", "Sarh") else 1
-             for u in operationnelles]
+    poids = [
+        6 if u.ville == "N'Djamena" else 2 if u.ville in ("Moundou", "Abéché", "Sarh") else 1 for u in operationnelles
+    ]
 
     base_numero = bd.execute(select(Compteur.valeur).where(Compteur.cle == f"P:NAT:{date.today().year}")).scalar() or 0
     personnes = []
@@ -289,20 +433,27 @@ def generer(bd: SessionBD, p: ParametresServeur, volumes: Volumes | None = None,
         compteurs[cle] = compteurs.get(cle, _valeur_compteur(bd, cle)) + 1
         agents = agents_par_unite.get(unite.id, [createur_defaut])
         statut = r.choices(list(StatutPlainte), [18, 12, 30, 8, 25, 7])[0]
-        plaintes.append(Plainte(
-            numero=f"PL-{unite.code}-{recue.year}-{compteurs[cle]:06d}", recue_le=recue,
-            service_enregistrement=f"Accueil {unite.nom}", unite_id=unite.id,
-            agent_responsable_id=r.choice(agents).id if unite.id in agents_par_unite else None,
-            categorie_id=r.choice(categories).id if r.random() < 0.92 else None,
-            description=r.choice(DESCRIPTIONS), date_faits=(recue - timedelta(days=r.randint(0, 10))).date()
-            if r.random() < 0.85 else None,
-            lieu_faits=f"Quartier fictif {r.randint(1, 40)}, {unite.ville}" if r.random() < 0.8 else None,
-            province_code=unite.province_code, statut=statut,
-            motif_statut="Clôture administrative fictive pour démonstration." if statut in (
-                StatutPlainte.CLOTUREE, StatutPlainte.ARCHIVEE) else None,
-            service_destinataire="Parquet (fictif)" if statut == StatutPlainte.TRANSMISE else None,
-            cree_par_id=r.choice(agents).id, est_synthetique=True,
-        ))
+        plaintes.append(
+            Plainte(
+                numero=f"PL-{unite.code}-{recue.year}-{compteurs[cle]:06d}",
+                recue_le=recue,
+                service_enregistrement=f"Accueil {unite.nom}",
+                unite_id=unite.id,
+                agent_responsable_id=r.choice(agents).id if unite.id in agents_par_unite else None,
+                categorie_id=r.choice(categories).id if r.random() < 0.92 else None,
+                description=r.choice(DESCRIPTIONS),
+                date_faits=(recue - timedelta(days=r.randint(0, 10))).date() if r.random() < 0.85 else None,
+                lieu_faits=f"Quartier fictif {r.randint(1, 40)}, {unite.ville}" if r.random() < 0.8 else None,
+                province_code=unite.province_code,
+                statut=statut,
+                motif_statut="Clôture administrative fictive pour démonstration."
+                if statut in (StatutPlainte.CLOTUREE, StatutPlainte.ARCHIVEE)
+                else None,
+                service_destinataire="Parquet (fictif)" if statut == StatutPlainte.TRANSMISE else None,
+                cree_par_id=r.choice(agents).id,
+                est_synthetique=True,
+            )
+        )
     bd.add_all(plaintes)
     for cle, valeur in compteurs.items():
         _fixer_compteur(bd, cle, valeur)
@@ -311,10 +462,13 @@ def generer(bd: SessionBD, p: ParametresServeur, volumes: Volumes | None = None,
     liens = []
     for pl in plaintes:
         choisies = r.sample(personnes, k=r.randint(1, 3))
-        roles = [RolePersonne.PLAIGNANT] + [r.choice([RolePersonne.MIS_EN_CAUSE, RolePersonne.TEMOIN,
-                                                      RolePersonne.VICTIME, RolePersonne.PERSONNE_CITEE])
-                                            for _ in choisies[1:]]
-        for personne, role in zip(choisies, roles):
+        roles = [RolePersonne.PLAIGNANT] + [
+            r.choice(
+                [RolePersonne.MIS_EN_CAUSE, RolePersonne.TEMOIN, RolePersonne.VICTIME, RolePersonne.PERSONNE_CITEE]
+            )
+            for _ in choisies[1:]
+        ]
+        for personne, role in zip(choisies, roles, strict=False):
             liens.append(LienPlaintePersonne(plainte_id=pl.id, personne_id=personne.id, role=role))
     bd.add_all(liens)
     liens_par_plainte: dict[str, list[LienPlaintePersonne]] = {}
@@ -333,23 +487,35 @@ def generer(bd: SessionBD, p: ParametresServeur, volumes: Volumes | None = None,
         cle = f"DO:{unite.code}:{ouverture.year}"
         compteurs[cle] = compteurs.get(cle, _valeur_compteur(bd, cle)) + 1
         statut = r.choices(list(StatutDossier), [20, 40, 15, 20, 5])[0]
-        d = Dossier(numero=f"DO-{unite.code}-{ouverture.year}-{compteurs[cle]:06d}",
-                    intitule=f"Procédure fictive relative à la plainte {pl.numero}",
-                    type_procedure=r.choice(list(TypeProcedure)), unite_id=unite.id,
-                    enqueteur_id=enqueteur.id if unite.code == "CP-NDJ" and i % 2 == 0 else None,
-                    statut=statut, date_ouverture=ouverture,
-                    date_cloture=date.today() if statut in (StatutDossier.CLOTURE, StatutDossier.ARCHIVE) else None,
-                    motif_cloture="Clôture fictive." if statut in (StatutDossier.CLOTURE, StatutDossier.ARCHIVE)
-                    else None, juridiction="Tribunal de grande instance (fictif)" if r.random() < 0.5 else None,
-                    cree_par_id=createur_defaut.id, est_synthetique=True)
+        d = Dossier(
+            numero=f"DO-{unite.code}-{ouverture.year}-{compteurs[cle]:06d}",
+            intitule=f"Procédure fictive relative à la plainte {pl.numero}",
+            type_procedure=r.choice(list(TypeProcedure)),
+            unite_id=unite.id,
+            enqueteur_id=enqueteur.id if unite.code == "CP-NDJ" and i % 2 == 0 else None,
+            statut=statut,
+            date_ouverture=ouverture,
+            date_cloture=date.today() if statut in (StatutDossier.CLOTURE, StatutDossier.ARCHIVE) else None,
+            motif_cloture="Clôture fictive." if statut in (StatutDossier.CLOTURE, StatutDossier.ARCHIVE) else None,
+            juridiction="Tribunal de grande instance (fictif)" if r.random() < 0.5 else None,
+            cree_par_id=createur_defaut.id,
+            est_synthetique=True,
+        )
         bd.add(d)
         bd.flush()
         bd.add(LienDossierPlainte(dossier_id=d.id, plainte_id=pl.id))
         for lien in liens_par_plainte.get(pl.id, []):
             bd.add(LienDossierPersonne(dossier_id=d.id, personne_id=lien.personne_id, role=lien.role))
-        bd.add(ActeProcedure(dossier_id=d.id, type_acte=TypeActe.PROCES_VERBAL,
-                             reference=f"PV-FICTIF-{i + 1:05d}", date_acte=ouverture,
-                             resume="Procès-verbal fictif de démonstration.", redige_par_id=createur_defaut.id))
+        bd.add(
+            ActeProcedure(
+                dossier_id=d.id,
+                type_acte=TypeActe.PROCES_VERBAL,
+                reference=f"PV-FICTIF-{i + 1:05d}",
+                date_acte=ouverture,
+                resume="Procès-verbal fictif de démonstration.",
+                redige_par_id=createur_defaut.id,
+            )
+        )
         dossiers.append(d)
     for cle, valeur in compteurs.items():
         _fixer_compteur(bd, cle, valeur)
@@ -363,13 +529,23 @@ def generer(bd: SessionBD, p: ParametresServeur, volumes: Volumes | None = None,
         cle = f"FT:{unite.code}:{annee}"
         compteurs[cle] = compteurs.get(cle, _valeur_compteur(bd, cle)) + 1
         nature = r.choices(list(NatureInformation), [55, 30, 15, 0])[0]
-        f = Fait(reference=f"FT-{unite.code}-{annee}-{compteurs[cle]:06d}",
-                 categorie_id=pl.categorie_id or categories[0].id, date_declaree=pl.date_faits, lieu=pl.lieu_faits,
-                 province_code=pl.province_code, description="Fait fictif rapporté pour la démonstration.",
-                 source_information=SourceInformation.PLAINTE, nature_information=nature,
-                 etat_verification=EtatVerification.VERIFIE if nature == NatureInformation.FAIT_VERIFIE
-                 else r.choice([EtatVerification.NON_VERIFIE, EtatVerification.EN_VERIFICATION]),
-                 unite_id=unite.id, plainte_id=pl.id, cree_par_id=createur_defaut.id, est_synthetique=True)
+        f = Fait(
+            reference=f"FT-{unite.code}-{annee}-{compteurs[cle]:06d}",
+            categorie_id=pl.categorie_id or categories[0].id,
+            date_declaree=pl.date_faits,
+            lieu=pl.lieu_faits,
+            province_code=pl.province_code,
+            description="Fait fictif rapporté pour la démonstration.",
+            source_information=SourceInformation.PLAINTE,
+            nature_information=nature,
+            etat_verification=EtatVerification.VERIFIE
+            if nature == NatureInformation.FAIT_VERIFIE
+            else r.choice([EtatVerification.NON_VERIFIE, EtatVerification.EN_VERIFICATION]),
+            unite_id=unite.id,
+            plainte_id=pl.id,
+            cree_par_id=createur_defaut.id,
+            est_synthetique=True,
+        )
         bd.add(f)
         bd.flush()
         for lien in liens_par_plainte.get(pl.id, [])[:2]:
@@ -378,19 +554,35 @@ def generer(bd: SessionBD, p: ParametresServeur, volumes: Volumes | None = None,
         _fixer_compteur(bd, cle, valeur)
 
     for personne in r.sample(personnes, k=min(volumes.captures, len(personnes))):
-        bd.add(CaptureBiometrique(
-            personne_id=personne.id, modalite="EMPREINTE_DIGITALE", position_doigt="INDEX_DROIT",
-            adaptateur="simulation", equipement="Capteur simulé (aucun matériel)",
-            collectee_le=maintenant - timedelta(days=r.randint(1, 300)),
-            fondement_legal="Fondement juridique fictif (démonstration).", consentement_recueilli=True,
-            agent_id=createur_defaut.id, unite_id=personne.unite_creation_id,
-            reference_modele=f"SIM-DEMO-{r.getrandbits(48):012x}", qualite=r.randint(60, 99),
-            conserver_jusqua=date.today() + timedelta(days=365 * 5), statut=StatutCapture.ACTIVE,
-            est_synthetique=True))
+        bd.add(
+            CaptureBiometrique(
+                personne_id=personne.id,
+                modalite="EMPREINTE_DIGITALE",
+                position_doigt="INDEX_DROIT",
+                adaptateur="simulation",
+                equipement="Capteur simulé (aucun matériel)",
+                collectee_le=maintenant - timedelta(days=r.randint(1, 300)),
+                fondement_legal="Fondement juridique fictif (démonstration).",
+                consentement_recueilli=True,
+                agent_id=createur_defaut.id,
+                unite_id=personne.unite_creation_id,
+                reference_modele=f"SIM-DEMO-{r.getrandbits(48):012x}",
+                qualite=r.randint(60, 99),
+                conserver_jusqua=date.today() + timedelta(days=365 * 5),
+                statut=StatutCapture.ACTIVE,
+                est_synthetique=True,
+            )
+        )
     bd.flush()
-    return {"unites": len(liste_unites), "utilisateurs": len(utilisateurs), "personnes": len(personnes),
-            "plaintes": len(plaintes), "dossiers": len(dossiers), "faits": volumes.faits,
-            "captures": volumes.captures}
+    return {
+        "unites": len(liste_unites),
+        "utilisateurs": len(utilisateurs),
+        "personnes": len(personnes),
+        "plaintes": len(plaintes),
+        "dossiers": len(dossiers),
+        "faits": volumes.faits,
+        "captures": volumes.captures,
+    }
 
 
 def _valeur_compteur(bd: SessionBD, cle: str) -> int:

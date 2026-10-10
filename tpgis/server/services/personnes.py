@@ -26,8 +26,8 @@ from tpgis.server.services.contexte import (
     Contexte,
     filtre_dossiers,
     filtre_faits,
-    filtre_plaintes,
     filtre_personnes,
+    filtre_plaintes,
 )
 from tpgis.server.services.erreurs import HORS_PERIMETRE, Conflit, DonneesInvalides, Introuvable
 from tpgis.shared import schemas
@@ -128,9 +128,18 @@ def serialiser_resume(p: Personne) -> dict:
     }
 
 
-def rechercher_candidats(bd: SessionBD, ctx: Contexte, nom: str, prenoms: str | None, date_naissance: date | None,
-                         lieu_naissance: str | None, numero_document: str | None, exclure_id: str | None = None,
-                         seuil: int = SEUIL_CANDIDAT, nationale: bool = True) -> list[dict]:
+def rechercher_candidats(
+    bd: SessionBD,
+    ctx: Contexte,
+    nom: str,
+    prenoms: str | None,
+    date_naissance: date | None,
+    lieu_naissance: str | None,
+    numero_document: str | None,
+    exclure_id: str | None = None,
+    seuil: int = SEUIL_CANDIDAT,
+    nationale: bool = True,
+) -> list[dict]:
     idx = index_aveugle().calculer(numero_document)
     nom_norm = normaliser_texte(nom or "")
     conditions = []
@@ -144,8 +153,11 @@ def rechercher_candidats(bd: SessionBD, ctx: Contexte, nom: str, prenoms: str | 
         return []
     requete = (
         select(Personne)
-        .where(or_(*conditions), Personne.statut == StatutPersonne.ACTIVE,
-               filtre_personnes(ctx, recherche_nationale=nationale))
+        .where(
+            or_(*conditions),
+            Personne.statut == StatutPersonne.ACTIVE,
+            filtre_personnes(ctx, recherche_nationale=nationale),
+        )
         .limit(1000)
     )
     if exclure_id:
@@ -154,19 +166,29 @@ def rechercher_candidats(bd: SessionBD, ctx: Contexte, nom: str, prenoms: str | 
     for p in bd.execute(requete).unique().scalars():
         score, concordants, ambiguites = evaluer_correspondance(p, nom, prenoms, date_naissance, lieu_naissance, idx)
         if score >= seuil:
-            resultats.append({**serialiser_resume(p), "score": score, "niveau": niveau(score),
-                              "attributs_concordants": concordants, "ambiguites": ambiguites})
+            resultats.append(
+                {
+                    **serialiser_resume(p),
+                    "score": score,
+                    "niveau": niveau(score),
+                    "attributs_concordants": concordants,
+                    "ambiguites": ambiguites,
+                }
+            )
     resultats.sort(key=lambda r: r["score"], reverse=True)
     return resultats[:25]
 
 
 def obtenir(bd: SessionBD, ctx: Contexte, personne_id: str) -> Personne:
-    p = bd.execute(
-        select(Personne).where(Personne.id == personne_id, filtre_personnes(ctx))
-    ).unique().scalar_one_or_none()
+    p = (
+        bd.execute(select(Personne).where(Personne.id == personne_id, filtre_personnes(ctx)))
+        .unique()
+        .scalar_one_or_none()
+    )
     if p is None:
-        audit.enregistrer_ctx(bd, ctx, "PERSONNE_CONSULTATION", resultat="REFUS", type_ressource="personne",
-                              ressource_id=personne_id)
+        audit.enregistrer_ctx(
+            bd, ctx, "PERSONNE_CONSULTATION", resultat="REFUS", type_ressource="personne", ressource_id=personne_id
+        )
         bd.commit()
         raise Introuvable(HORS_PERIMETRE)
     return p
@@ -180,8 +202,9 @@ def lister(bd: SessionBD, ctx: Contexte, texte: str | None, page: int, taille: i
         requete = requete.where(or_(Personne.nom_normalise.like(f"%{t}%"), Personne.numero_interne == texte.strip()))
     requete = requete.order_by(Personne.nom_normalise)
     elements, total = paginer(bd, requete, page, taille)
-    audit.enregistrer_ctx(bd, ctx, "PERSONNE_LISTE", type_ressource="personne",
-                          details={"filtre": bool(texte), "page": page})
+    audit.enregistrer_ctx(
+        bd, ctx, "PERSONNE_LISTE", type_ressource="personne", details={"filtre": bool(texte), "page": page}
+    )
     return {"elements": [serialiser_resume(p) for p in elements], "total": total, "page": page, "taille": taille}
 
 
@@ -192,22 +215,43 @@ def _liens(bd: SessionBD, ctx: Contexte, personne_id: str) -> list[dict]:
         .join(Plainte, Plainte.id == LienPlaintePersonne.plainte_id)
         .where(LienPlaintePersonne.personne_id == personne_id, filtre_plaintes(ctx))
     ).unique():
-        liens.append({"type": "plainte", "id": plainte.id, "reference": plainte.numero, "role": lien.role,
-                      "statut": plainte.statut})
+        liens.append(
+            {
+                "type": "plainte",
+                "id": plainte.id,
+                "reference": plainte.numero,
+                "role": lien.role,
+                "statut": plainte.statut,
+            }
+        )
     for lien, dossier in bd.execute(
         select(LienDossierPersonne, Dossier)
         .join(Dossier, Dossier.id == LienDossierPersonne.dossier_id)
         .where(LienDossierPersonne.personne_id == personne_id, filtre_dossiers(ctx))
     ).unique():
-        liens.append({"type": "dossier", "id": dossier.id, "reference": dossier.numero, "role": lien.role,
-                      "statut": dossier.statut})
+        liens.append(
+            {
+                "type": "dossier",
+                "id": dossier.id,
+                "reference": dossier.numero,
+                "role": lien.role,
+                "statut": dossier.statut,
+            }
+        )
     for lien, fait in bd.execute(
         select(LienFaitPersonne, Fait)
         .join(Fait, Fait.id == LienFaitPersonne.fait_id)
         .where(LienFaitPersonne.personne_id == personne_id, filtre_faits(ctx))
     ).unique():
-        liens.append({"type": "fait", "id": fait.id, "reference": fait.reference, "role": lien.role,
-                      "statut": fait.etat_verification})
+        liens.append(
+            {
+                "type": "fait",
+                "id": fait.id,
+                "reference": fait.reference,
+                "role": lien.role,
+                "statut": fait.etat_verification,
+            }
+        )
     return liens
 
 
@@ -219,10 +263,13 @@ def detail(bd: SessionBD, ctx: Contexte, personne_id: str) -> dict:
     p = obtenir(bd, ctx, personne_id)
     nb_captures = None
     if ctx.a(Permission.BIOMETRIE_LIRE):
-        nb_captures = len(bd.execute(
-            select(CaptureBiometrique.id).where(CaptureBiometrique.personne_id == p.id,
-                                                CaptureBiometrique.statut == "ACTIVE")
-        ).all())
+        nb_captures = len(
+            bd.execute(
+                select(CaptureBiometrique.id).where(
+                    CaptureBiometrique.personne_id == p.id, CaptureBiometrique.statut == "ACTIVE"
+                )
+            ).all()
+        )
     resultat = {
         **serialiser_resume(p),
         "alias": p.alias or [],
@@ -244,8 +291,14 @@ def detail(bd: SessionBD, ctx: Contexte, personne_id: str) -> dict:
 def creer(bd: SessionBD, ctx: Contexte, donnees: schemas.PersonneCreation) -> dict:
     ctx.exiger(Permission.PERSONNE_CREER)
     candidats = rechercher_candidats(
-        bd, ctx, donnees.nom, donnees.prenoms, donnees.date_naissance, donnees.lieu_naissance,
-        donnees.numero_document, seuil=55,
+        bd,
+        ctx,
+        donnees.nom,
+        donnees.prenoms,
+        donnees.date_naissance,
+        donnees.lieu_naissance,
+        donnees.numero_document,
+        seuil=55,
     )
     if candidats and not donnees.confirmer_malgre_doublons:
         raise Conflit(
@@ -268,8 +321,14 @@ def creer(bd: SessionBD, ctx: Contexte, donnees: schemas.PersonneCreation) -> di
     bd.add(p)
     bd.flush()
     historiser(bd, ctx, "personne", p.id, "CREATION", {"doublons_signales": len(candidats)})
-    audit.enregistrer_ctx(bd, ctx, "PERSONNE_CREATION", type_ressource="personne", ressource_id=p.id,
-                          details={"doublons_signales_ignores": len(candidats)})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "PERSONNE_CREATION",
+        type_ressource="personne",
+        ressource_id=p.id,
+        details={"doublons_signales_ignores": len(candidats)},
+    )
     return serialiser_resume(p)
 
 
@@ -277,8 +336,9 @@ def modifier(bd: SessionBD, ctx: Contexte, personne_id: str, donnees: schemas.Pe
     ctx.exiger(Permission.PERSONNE_MODIFIER)
     p = obtenir(bd, ctx, personne_id)
     if p.version != donnees.version:
-        raise Conflit("La fiche a été modifiée entre temps par un autre utilisateur. Rechargez-la.",
-                      code="VERSION_OBSOLETE")
+        raise Conflit(
+            "La fiche a été modifiée entre temps par un autre utilisateur. Rechargez-la.", code="VERSION_OBSOLETE"
+        )
     if p.statut != StatutPersonne.ACTIVE:
         raise Conflit("Cette fiche a été fusionnée et ne peut plus être modifiée.")
     valeurs = donnees.model_dump(exclude_unset=True, exclude={"version"})
@@ -291,8 +351,14 @@ def modifier(bd: SessionBD, ctx: Contexte, personne_id: str, donnees: schemas.Pe
         p.nom_normalise = nom_complet_normalise(p.nom, p.prenoms)
     changements.pop("index_document", None)
     historiser(bd, ctx, "personne", p.id, "MODIFICATION", changements)
-    audit.enregistrer_ctx(bd, ctx, "PERSONNE_MODIFICATION", type_ressource="personne", ressource_id=p.id,
-                          details={"champs": sorted(changements)})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "PERSONNE_MODIFICATION",
+        type_ressource="personne",
+        ressource_id=p.id,
+        details={"champs": sorted(changements)},
+    )
     bd.flush()
     return serialiser_resume(p)
 
@@ -308,9 +374,12 @@ def demander_fusion(bd: SessionBD, ctx: Contexte, donnees: schemas.DemandeFusion
     if a.statut != StatutPersonne.ACTIVE or b.statut != StatutPersonne.ACTIVE:
         raise Conflit("Une des fiches a déjà été fusionnée.")
     return creer_demande(
-        bd, ctx, TypeValidation.FUSION_PERSONNES,
+        bd,
+        ctx,
+        TypeValidation.FUSION_PERSONNES,
         {"personne_conservee_id": a.id, "personne_absorbee_id": b.id},
-        f"Fusion de {b.numero_interne} dans {a.numero_interne}", donnees.motif,
+        f"Fusion de {b.numero_interne} dans {a.numero_interne}",
+        donnees.motif,
     )
 
 
@@ -347,6 +416,7 @@ def executer_fusion(bd: SessionBD, ctx: Contexte, conservee_id: str, absorbee_id
     bd.flush()
     historiser(bd, ctx, "personne", a.id, "FUSION", {"absorbee": b.numero_interne, "motif": motif})
     historiser(bd, ctx, "personne", b.id, "FUSIONNEE", {"dans": a.numero_interne, "motif": motif})
-    audit.enregistrer_ctx(bd, ctx, "PERSONNE_FUSION", type_ressource="personne", ressource_id=a.id,
-                          details={"absorbee_id": b.id})
+    audit.enregistrer_ctx(
+        bd, ctx, "PERSONNE_FUSION", type_ressource="personne", ressource_id=a.id, details={"absorbee_id": b.id}
+    )
     return f"Fiche {b.numero_interne} fusionnée dans {a.numero_interne}."

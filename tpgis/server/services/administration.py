@@ -84,8 +84,14 @@ def modifier_unite(bd: SessionBD, ctx: Contexte, unite_id: str, donnees: schemas
         _verifier_parent(bd, valeurs["parent_id"], unite.id)
     changements = appliquer_modifications(unite, valeurs)
     historiser(bd, ctx, "unite", unite.id, "MODIFICATION", changements)
-    audit.enregistrer_ctx(bd, ctx, "UNITE_MODIFICATION", type_ressource="unite", ressource_id=unite.id,
-                          details={"champs": list(changements)})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "UNITE_MODIFICATION",
+        type_ressource="unite",
+        ressource_id=unite.id,
+        details={"champs": list(changements)},
+    )
     return serialiser_unite(unite)
 
 
@@ -125,19 +131,32 @@ def creer_role(bd: SessionBD, ctx: Contexte, donnees: schemas.RoleCreation) -> d
     if bd.execute(select(Role.id).where(Role.code == donnees.code)).first():
         raise Conflit("Un rôle porte déjà ce code.")
     perms = _valider_permissions(donnees.permissions)
-    role = Role(code=donnees.code, libelle=donnees.libelle, description=donnees.description,
-                portee_defaut=donnees.portee_defaut, systeme=False, actif=True)
+    role = Role(
+        code=donnees.code,
+        libelle=donnees.libelle,
+        description=donnees.description,
+        portee_defaut=donnees.portee_defaut,
+        systeme=False,
+        actif=True,
+    )
     role.permissions = [RolePermission(permission=p) for p in sorted(perms)]
     bd.add(role)
     bd.flush()
     historiser(bd, ctx, "role", role.id, "CREATION", {"permissions": sorted(perms)})
-    audit.enregistrer_ctx(bd, ctx, "ROLE_CREATION", type_ressource="role", ressource_id=role.id,
-                          details={"code": role.code, "permissions": sorted(perms)})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "ROLE_CREATION",
+        type_ressource="role",
+        ressource_id=role.id,
+        details={"code": role.code, "permissions": sorted(perms)},
+    )
     return serialiser_role(role)
 
 
-def modifier_role(bd: SessionBD, ctx: Contexte, p: ParametresServeur, role_id: str,
-                  donnees: schemas.RoleModification) -> dict:
+def modifier_role(
+    bd: SessionBD, ctx: Contexte, p: ParametresServeur, role_id: str, donnees: schemas.RoleModification
+) -> dict:
     from tpgis.server.services.auth import exiger_reauthentification_recente
 
     ctx.exiger(Permission.ROLE_GERER)
@@ -159,16 +178,19 @@ def modifier_role(bd: SessionBD, ctx: Contexte, p: ParametresServeur, role_id: s
                     "puis demander l'attribution aux comptes concernés."
                 )
             role.permissions = [RolePermission(permission=x) for x in sorted(nouvelles)]
-            changements["permissions"] = {"ajoutees": sorted(nouvelles - anciennes),
-                                          "retirees": sorted(anciennes - nouvelles)}
+            changements["permissions"] = {
+                "ajoutees": sorted(nouvelles - anciennes),
+                "retirees": sorted(anciennes - nouvelles),
+            }
             # Les droits sont recalcules a chaque requete ; on revoque tout de
             # meme les sessions pour forcer une reconnexion consciente.
             for (uid,) in bd.execute(select(Utilisateur.id).where(Utilisateur.role_id == role.id)):
                 revoquer_sessions(bd, uid, "modification_role")
     changements.update(appliquer_modifications(role, valeurs))
     historiser(bd, ctx, "role", role.id, "MODIFICATION", changements)
-    audit.enregistrer_ctx(bd, ctx, "ROLE_MODIFICATION", type_ressource="role", ressource_id=role.id,
-                          details=changements)
+    audit.enregistrer_ctx(
+        bd, ctx, "ROLE_MODIFICATION", type_ressource="role", ressource_id=role.id, details=changements
+    )
     return serialiser_role(role)
 
 
@@ -196,8 +218,9 @@ def serialiser_utilisateur(u: Utilisateur) -> dict:
     }
 
 
-def lister_utilisateurs(bd: SessionBD, ctx: Contexte, texte: str | None, page: int, taille: int,
-                        unite_id: str | None = None) -> dict:
+def lister_utilisateurs(
+    bd: SessionBD, ctx: Contexte, texte: str | None, page: int, taille: int, unite_id: str | None = None
+) -> dict:
     ctx.exiger(Permission.UTILISATEUR_LIRE)
     requete = select(Utilisateur).order_by(Utilisateur.nom, Utilisateur.prenoms)
     if ctx.unites_accessibles is not None:
@@ -206,8 +229,9 @@ def lister_utilisateurs(bd: SessionBD, ctx: Contexte, texte: str | None, page: i
         requete = requete.where(Utilisateur.unite_id == unite_id)
     if texte:
         motif = f"%{texte.strip()}%"
-        requete = requete.where(or_(Utilisateur.identifiant.ilike(motif), Utilisateur.nom.ilike(motif),
-                                    Utilisateur.matricule.ilike(motif)))
+        requete = requete.where(
+            or_(Utilisateur.identifiant.ilike(motif), Utilisateur.nom.ilike(motif), Utilisateur.matricule.ilike(motif))
+        )
     elements, total = paginer(bd, requete, page, taille)
     return {"elements": [serialiser_utilisateur(u) for u in elements], "total": total, "page": page, "taille": taille}
 
@@ -217,7 +241,8 @@ def agents_assignables(bd: SessionBD, ctx: Contexte, unite_id: str) -> list[dict
     if not ctx.unite_accessible(unite_id):
         raise Introuvable("Unité hors de votre périmètre.")
     lignes = bd.execute(
-        select(Utilisateur).where(Utilisateur.unite_id == unite_id, Utilisateur.actif.is_(True))
+        select(Utilisateur)
+        .where(Utilisateur.unite_id == unite_id, Utilisateur.actif.is_(True))
         .order_by(Utilisateur.nom)
     ).scalars()
     return [{"id": u.id, "nom_complet": f"{u.grade or ''} {u.nom} {u.prenoms}".strip()} for u in lignes]
@@ -230,12 +255,14 @@ def _obtenir_utilisateur(bd: SessionBD, ctx: Contexte, utilisateur_id: str) -> U
     return u
 
 
-def creer_utilisateur(bd: SessionBD, ctx: Contexte, p: ParametresServeur,
-                      donnees: schemas.UtilisateurCreation) -> dict:
+def creer_utilisateur(bd: SessionBD, ctx: Contexte, p: ParametresServeur, donnees: schemas.UtilisateurCreation) -> dict:
     ctx.exiger(Permission.UTILISATEUR_GERER)
     if bd.execute(select(Utilisateur.id).where(Utilisateur.identifiant == donnees.identifiant)).first():
         raise Conflit("Cet identifiant est déjà utilisé.")
-    if donnees.matricule and bd.execute(select(Utilisateur.id).where(Utilisateur.matricule == donnees.matricule)).first():
+    if (
+        donnees.matricule
+        and bd.execute(select(Utilisateur.id).where(Utilisateur.matricule == donnees.matricule)).first()
+    ):
         raise Conflit("Ce matricule est déjà associé à un compte.")
     role = bd.get(Role, donnees.role_id)
     if role is None or not role.actif:
@@ -248,8 +275,9 @@ def creer_utilisateur(bd: SessionBD, ctx: Contexte, p: ParametresServeur,
     unite = bd.get(Unite, donnees.unite_id)
     if unite is None or not ctx.unite_accessible(unite.id):
         raise DonneesInvalides("Unité inconnue ou hors de votre périmètre.")
-    erreurs = passwords.controler_politique(donnees.mot_de_passe_initial, p.mot_de_passe_longueur_min,
-                                            donnees.identifiant)
+    erreurs = passwords.controler_politique(
+        donnees.mot_de_passe_initial, p.mot_de_passe_longueur_min, donnees.identifiant
+    )
     if erreurs:
         raise DonneesInvalides(" ".join(erreurs))
     u = Utilisateur(
@@ -268,13 +296,20 @@ def creer_utilisateur(bd: SessionBD, ctx: Contexte, p: ParametresServeur,
     bd.add(u)
     bd.flush()
     historiser(bd, ctx, "utilisateur", u.id, "CREATION", {"role": role.code, "unite": unite.code, "portee": u.portee})
-    audit.enregistrer_ctx(bd, ctx, "UTILISATEUR_CREATION", type_ressource="utilisateur", ressource_id=u.id,
-                          details={"identifiant": u.identifiant, "role": role.code})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "UTILISATEUR_CREATION",
+        type_ressource="utilisateur",
+        ressource_id=u.id,
+        details={"identifiant": u.identifiant, "role": role.code},
+    )
     return serialiser_utilisateur(u)
 
 
-def modifier_utilisateur(bd: SessionBD, ctx: Contexte, utilisateur_id: str,
-                         donnees: schemas.UtilisateurModification) -> dict:
+def modifier_utilisateur(
+    bd: SessionBD, ctx: Contexte, utilisateur_id: str, donnees: schemas.UtilisateurModification
+) -> dict:
     ctx.exiger(Permission.UTILISATEUR_GERER)
     u = _obtenir_utilisateur(bd, ctx, utilisateur_id)
     valeurs = donnees.model_dump(exclude_unset=True)
@@ -289,8 +324,9 @@ def modifier_utilisateur(bd: SessionBD, ctx: Contexte, utilisateur_id: str,
     if {"portee", "unite_id"} & set(changements):
         revoquer_sessions(bd, u.id, "modification_perimetre")
     historiser(bd, ctx, "utilisateur", u.id, "MODIFICATION", changements)
-    audit.enregistrer_ctx(bd, ctx, "UTILISATEUR_MODIFICATION", type_ressource="utilisateur", ressource_id=u.id,
-                          details=changements)
+    audit.enregistrer_ctx(
+        bd, ctx, "UTILISATEUR_MODIFICATION", type_ressource="utilisateur", ressource_id=u.id, details=changements
+    )
     return serialiser_utilisateur(u)
 
 
@@ -304,8 +340,14 @@ def desactiver_utilisateur(bd: SessionBD, ctx: Contexte, utilisateur_id: str, mo
     u.motif_desactivation = motif
     nb = revoquer_sessions(bd, u.id, "desactivation_compte")
     historiser(bd, ctx, "utilisateur", u.id, "DESACTIVATION", {"motif": motif})
-    audit.enregistrer_ctx(bd, ctx, "UTILISATEUR_DESACTIVATION", type_ressource="utilisateur", ressource_id=u.id,
-                          details={"motif": motif, "sessions_revoquees": nb})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "UTILISATEUR_DESACTIVATION",
+        type_ressource="utilisateur",
+        ressource_id=u.id,
+        details={"motif": motif, "sessions_revoquees": nb},
+    )
     return serialiser_utilisateur(u)
 
 
@@ -317,8 +359,9 @@ def reactiver_utilisateur(bd: SessionBD, ctx: Contexte, utilisateur_id: str, mot
     u.motif_desactivation = None
     u.doit_changer_mot_de_passe = True
     historiser(bd, ctx, "utilisateur", u.id, "REACTIVATION", {"motif": motif})
-    audit.enregistrer_ctx(bd, ctx, "UTILISATEUR_REACTIVATION", type_ressource="utilisateur", ressource_id=u.id,
-                          details={"motif": motif})
+    audit.enregistrer_ctx(
+        bd, ctx, "UTILISATEUR_REACTIVATION", type_ressource="utilisateur", ressource_id=u.id, details={"motif": motif}
+    )
     return serialiser_utilisateur(u)
 
 
@@ -326,13 +369,20 @@ def revoquer_sessions_utilisateur(bd: SessionBD, ctx: Contexte, utilisateur_id: 
     ctx.exiger(Permission.UTILISATEUR_GERER)
     u = _obtenir_utilisateur(bd, ctx, utilisateur_id)
     nb = revoquer_sessions(bd, u.id, "revocation_administrative")
-    audit.enregistrer_ctx(bd, ctx, "SESSIONS_REVOCATION", type_ressource="utilisateur", ressource_id=u.id,
-                          details={"sessions_revoquees": nb})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "SESSIONS_REVOCATION",
+        type_ressource="utilisateur",
+        ressource_id=u.id,
+        details={"sessions_revoquees": nb},
+    )
     return {"sessions_revoquees": nb}
 
 
-def reinitialiser_mot_de_passe(bd: SessionBD, ctx: Contexte, p: ParametresServeur, utilisateur_id: str,
-                               donnees: schemas.ReinitialisationMotDePasse) -> dict:
+def reinitialiser_mot_de_passe(
+    bd: SessionBD, ctx: Contexte, p: ParametresServeur, utilisateur_id: str, donnees: schemas.ReinitialisationMotDePasse
+) -> dict:
     """Reinitialisation par un administrateur : mot de passe temporaire a
     changer a la premiere connexion, sessions revoquees, MFA conservee."""
     from tpgis.server.services.auth import exiger_reauthentification_recente
@@ -342,8 +392,7 @@ def reinitialiser_mot_de_passe(bd: SessionBD, ctx: Contexte, p: ParametresServeu
     u = _obtenir_utilisateur(bd, ctx, utilisateur_id)
     if u.id == ctx.uid:
         raise AccesRefuse("Utilisez la fonction de changement de votre propre mot de passe.")
-    erreurs = passwords.controler_politique(donnees.mot_de_passe_temporaire, p.mot_de_passe_longueur_min,
-                                            u.identifiant)
+    erreurs = passwords.controler_politique(donnees.mot_de_passe_temporaire, p.mot_de_passe_longueur_min, u.identifiant)
     if erreurs:
         raise DonneesInvalides(" ".join(erreurs))
     u.mot_de_passe_hash = passwords.hacher(donnees.mot_de_passe_temporaire)
@@ -352,8 +401,14 @@ def reinitialiser_mot_de_passe(bd: SessionBD, ctx: Contexte, p: ParametresServeu
     u.verrouille_jusqua = None
     nb = revoquer_sessions(bd, u.id, "reinitialisation_mot_de_passe")
     historiser(bd, ctx, "utilisateur", u.id, "REINITIALISATION_MOT_DE_PASSE", {"motif": donnees.motif})
-    audit.enregistrer_ctx(bd, ctx, "MOT_DE_PASSE_REINITIALISATION", type_ressource="utilisateur",
-                          ressource_id=u.id, details={"motif": donnees.motif, "sessions_revoquees": nb})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "MOT_DE_PASSE_REINITIALISATION",
+        type_ressource="utilisateur",
+        ressource_id=u.id,
+        details={"motif": donnees.motif, "sessions_revoquees": nb},
+    )
     return {"message": "Mot de passe temporaire défini. L'utilisateur devra le changer à la connexion."}
 
 
@@ -369,13 +424,15 @@ def reinitialiser_mfa(bd: SessionBD, ctx: Contexte, p: ParametresServeur, utilis
     u.mfa_secret = None
     u.mfa_dernier_pas = None
     revoquer_sessions(bd, u.id, "reinitialisation_mfa")
-    audit.enregistrer_ctx(bd, ctx, "MFA_REINITIALISATION", type_ressource="utilisateur", ressource_id=u.id,
-                          details={"motif": motif})
+    audit.enregistrer_ctx(
+        bd, ctx, "MFA_REINITIALISATION", type_ressource="utilisateur", ressource_id=u.id, details={"motif": motif}
+    )
     return {"message": "Second facteur réinitialisé : l'utilisateur devra en enrôler un nouveau."}
 
 
-def demander_changement_role(bd: SessionBD, ctx: Contexte, utilisateur_id: str,
-                             donnees: schemas.ChangementRole) -> dict:
+def demander_changement_role(
+    bd: SessionBD, ctx: Contexte, utilisateur_id: str, donnees: schemas.ChangementRole
+) -> dict:
     """Un role standard est attribue immediatement ; un role privilegie fait
     l'objet d'une demande de double validation."""
     from tpgis.server.services.validations import creer_demande
@@ -389,9 +446,12 @@ def demander_changement_role(bd: SessionBD, ctx: Contexte, utilisateur_id: str,
         raise DonneesInvalides("Rôle inconnu ou inactif.")
     if est_privilegie(role.codes_permissions):
         demande = creer_demande(
-            bd, ctx, TypeValidation.ATTRIBUTION_ROLE_PRIVILEGIE,
+            bd,
+            ctx,
+            TypeValidation.ATTRIBUTION_ROLE_PRIVILEGIE,
             {"utilisateur_id": u.id, "role_id": role.id},
-            f"Attribution du rôle {role.libelle} à {u.identifiant}", donnees.motif,
+            f"Attribution du rôle {role.libelle} à {u.identifiant}",
+            donnees.motif,
         )
         return {"statut": StatutValidation.EN_ATTENTE, "demande_validation": demande}
     appliquer_changement_role(bd, ctx, u, role, donnees.motif)
@@ -405,8 +465,14 @@ def appliquer_changement_role(bd: SessionBD, ctx: Contexte, u: Utilisateur, role
     u.portee = role.portee_defaut
     revoquer_sessions(bd, u.id, "changement_role")
     historiser(bd, ctx, "utilisateur", u.id, "CHANGEMENT_ROLE", {"avant": ancien, "apres": role.code, "motif": motif})
-    audit.enregistrer_ctx(bd, ctx, "DROITS_MODIFICATION", type_ressource="utilisateur", ressource_id=u.id,
-                          details={"role_avant": ancien, "role_apres": role.code, "motif": motif})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "DROITS_MODIFICATION",
+        type_ressource="utilisateur",
+        ressource_id=u.id,
+        details={"role_avant": ancien, "role_apres": role.code, "motif": motif},
+    )
 
 
 # Referentiel des categories de faits
@@ -458,6 +524,7 @@ def modifier_categorie(bd: SessionBD, ctx: Contexte, categorie_id: str, donnees:
     if c.validee and not c.validee_par:
         raise DonneesInvalides("Indiquer l'autorité ayant validé la catégorie.")
     historiser(bd, ctx, "categorie", c.id, "MODIFICATION", changements)
-    audit.enregistrer_ctx(bd, ctx, "CATEGORIE_MODIFICATION", type_ressource="categorie", ressource_id=c.id,
-                          details=changements)
+    audit.enregistrer_ctx(
+        bd, ctx, "CATEGORIE_MODIFICATION", type_ressource="categorie", ressource_id=c.id, details=changements
+    )
     return serialiser_categorie(c)

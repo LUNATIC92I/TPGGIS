@@ -25,8 +25,9 @@ def test_desactivation_revoque_immediatement(client, connexions):
     assert client.get(f"{API}/plaintes", headers=h_cible).status_code == 200
     h_admin = connexions.entetes("admin.fonctionnel")
     cible = client.get(f"{API}/utilisateurs", headers=h_admin, params={"texte": "accueil.abc"}).json()["elements"][0]
-    r = client.post(f"{API}/utilisateurs/{cible['id']}/desactivation", headers=h_admin,
-                    json={"motif": "Départ de l'agent (test)"})
+    r = client.post(
+        f"{API}/utilisateurs/{cible['id']}/desactivation", headers=h_admin, json={"motif": "Départ de l'agent (test)"}
+    )
     assert r.status_code == 200 and r.json()["actif"] is False
     assert client.get(f"{API}/plaintes", headers=h_cible).status_code == 401
     r = client.post(f"{API}/auth/connexion", json={"identifiant": "accueil.abc", "mot_de_passe": MOT_DE_PASSE_DEMO})
@@ -81,8 +82,10 @@ def test_message_identique_compte_inconnu(client, donnees):
 
 def test_limitation_debit_connexion(app, client, donnees, parametres):
     parametres.limite_connexion_par_minute_ip = 3
-    codes = [client.post(f"{API}/auth/connexion", json={"identifiant": "xyz", "mot_de_passe": "y"}).status_code
-             for _ in range(5)]
+    codes = [
+        client.post(f"{API}/auth/connexion", json={"identifiant": "xyz", "mot_de_passe": "y"}).status_code
+        for _ in range(5)
+    ]
     assert codes[:3] == [401, 401, 401]
     assert codes[3] == 429
 
@@ -90,8 +93,10 @@ def test_limitation_debit_connexion(app, client, donnees, parametres):
 def test_mfa_obligatoire_pour_compte_privilegie(client, donnees):
     r = client.post(f"{API}/auth/connexion", json={"identifiant": "officier.ndj", "mot_de_passe": MOT_DE_PASSE_DEMO})
     assert r.status_code == 401 and r.json()["code"] == "MFA_REQUISE"
-    r = client.post(f"{API}/auth/connexion", json={"identifiant": "officier.ndj", "mot_de_passe": MOT_DE_PASSE_DEMO,
-                                                   "code_mfa": "000000"})
+    r = client.post(
+        f"{API}/auth/connexion",
+        json={"identifiant": "officier.ndj", "mot_de_passe": MOT_DE_PASSE_DEMO, "code_mfa": "000000"},
+    )
     assert r.status_code == 401
 
 
@@ -125,14 +130,21 @@ def test_changement_mot_de_passe_obligatoire(client, connexions, app):
     h = {"Authorization": f"Bearer {r.json()['jeton']}"}
     assert r.json()["type_session"] == "CHANGEMENT_MOT_DE_PASSE"
     assert client.get(f"{API}/plaintes", headers=h).status_code == 403
-    r = client.post(f"{API}/auth/mot-de-passe", headers=h,
-                    json={"ancien_mot_de_passe": MOT_DE_PASSE_DEMO, "nouveau_mot_de_passe": "court"})
+    r = client.post(
+        f"{API}/auth/mot-de-passe",
+        headers=h,
+        json={"ancien_mot_de_passe": MOT_DE_PASSE_DEMO, "nouveau_mot_de_passe": "court"},
+    )
     assert r.status_code == 422
-    r = client.post(f"{API}/auth/mot-de-passe", headers=h,
-                    json={"ancien_mot_de_passe": MOT_DE_PASSE_DEMO, "nouveau_mot_de_passe": "Nouveau-Mot2Passe!Sur"})
+    r = client.post(
+        f"{API}/auth/mot-de-passe",
+        headers=h,
+        json={"ancien_mot_de_passe": MOT_DE_PASSE_DEMO, "nouveau_mot_de_passe": "Nouveau-Mot2Passe!Sur"},
+    )
     assert r.status_code == 200
-    r = client.post(f"{API}/auth/connexion", json={"identifiant": "accueil.ndj",
-                                                   "mot_de_passe": "Nouveau-Mot2Passe!Sur"})
+    r = client.post(
+        f"{API}/auth/connexion", json={"identifiant": "accueil.ndj", "mot_de_passe": "Nouveau-Mot2Passe!Sur"}
+    )
     assert r.json()["type_session"] == "COMPLETE"
 
 
@@ -148,8 +160,7 @@ def test_operation_critique_exige_reauthentification(client, connexions, app):
     connexions.reauthentifier("admin.fonctionnel", h)
     r = client.post(f"{API}/utilisateurs/{cible['id']}/reinitialisation-mot-de-passe", headers=h, json=corps)
     assert r.status_code == 200
-    r = client.post(f"{API}/auth/connexion", json={"identifiant": "accueil.ndj",
-                                                   "mot_de_passe": "Temporaire-2026!Sur"})
+    r = client.post(f"{API}/auth/connexion", json={"identifiant": "accueil.ndj", "mot_de_passe": "Temporaire-2026!Sur"})
     assert r.json()["type_session"] == "CHANGEMENT_MOT_DE_PASSE"
 
 

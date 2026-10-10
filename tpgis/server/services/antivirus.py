@@ -52,7 +52,7 @@ class AnalyseurClamd:
             with self._connexion() as s:
                 s.sendall(b"zINSTREAM\0")
                 for debut in range(0, len(donnees), self.TAILLE_BLOC):
-                    bloc = donnees[debut:debut + self.TAILLE_BLOC]
+                    bloc = donnees[debut : debut + self.TAILLE_BLOC]
                     s.sendall(struct.pack("!L", len(bloc)) + bloc)
                 s.sendall(struct.pack("!L", 0))
                 reponse = b""

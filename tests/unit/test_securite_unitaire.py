@@ -71,9 +71,16 @@ def test_totp_anti_rejeu():
 
 
 def test_nettoyage_audit():
-    details = nettoyer_details({"mot_de_passe": "secret", "jeton_session": "abc", "reference_modele": "SIM-1",
-                                "nom": "ABAKAR", "imbrique": {"code_mfa": "123456", "statut": "OK"},
-                                "texte": "x" * 2000})
+    details = nettoyer_details(
+        {
+            "mot_de_passe": "secret",
+            "jeton_session": "abc",
+            "reference_modele": "SIM-1",
+            "nom": "ABAKAR",
+            "imbrique": {"code_mfa": "123456", "statut": "OK"},
+            "texte": "x" * 2000,
+        }
+    )
     assert details["mot_de_passe"] == details["jeton_session"] == details["reference_modele"] == "[masqué]"
     assert details["imbrique"] == {"code_mfa": "[masqué]", "statut": "OK"}
     assert details["nom"] == "ABAKAR" and len(details["texte"]) == 500
@@ -96,17 +103,30 @@ def test_score_doublons_multi_attributs():
     assert score < 40 and "Dates de naissance différentes" in ambiguites
 
 
-@pytest.mark.parametrize("extension,contenu", [
-    ("pdf", b"%PDF-1.7 ..."), ("png", b"\x89PNG\r\n\x1a\nxxxx"), ("jpg", b"\xff\xd8\xff\xe0xx"),
-    ("tif", b"II*\x00xx"), ("txt", "texte accentué".encode()),
-])
+@pytest.mark.parametrize(
+    "extension,contenu",
+    [
+        ("pdf", b"%PDF-1.7 ..."),
+        ("png", b"\x89PNG\r\n\x1a\nxxxx"),
+        ("jpg", b"\xff\xd8\xff\xe0xx"),
+        ("tif", b"II*\x00xx"),
+        ("txt", "texte accentué".encode()),
+    ],
+)
 def test_signatures_valides(extension, contenu):
     verifier_signature(contenu, extension)
 
 
-@pytest.mark.parametrize("extension,contenu", [
-    ("pdf", b"MZ\x90"), ("png", b"%PDF"), ("jpg", b"GIF89a"), ("txt", b"\xff\xfe\x00"), ("docx", b"PK\x03\x04abc"),
-])
+@pytest.mark.parametrize(
+    "extension,contenu",
+    [
+        ("pdf", b"MZ\x90"),
+        ("png", b"%PDF"),
+        ("jpg", b"GIF89a"),
+        ("txt", b"\xff\xfe\x00"),
+        ("docx", b"PK\x03\x04abc"),
+    ],
+)
 def test_signatures_invalides(extension, contenu):
     with pytest.raises(DonneesInvalides):
         verifier_signature(contenu, extension)

@@ -51,10 +51,12 @@ def _construire_contexte(request: Request, bd: SessionBD, types_autorises: set[s
     session = valider_jeton(bd, p, _jeton(request))
     if session.type_session not in types_autorises:
         if session.type_session == TypeSession.CHANGEMENT_MOT_DE_PASSE:
-            raise AccesRefuse("Vous devez changer votre mot de passe avant de continuer.",
-                              code="CHANGEMENT_MOT_DE_PASSE_REQUIS")
-        raise AccesRefuse("Vous devez activer l'authentification multifacteur avant de continuer.",
-                          code="ENROLEMENT_MFA_REQUIS")
+            raise AccesRefuse(
+                "Vous devez changer votre mot de passe avant de continuer.", code="CHANGEMENT_MOT_DE_PASSE_REQUIS"
+            )
+        raise AccesRefuse(
+            "Vous devez activer l'authentification multifacteur avant de continuer.", code="ENROLEMENT_MFA_REQUIS"
+        )
     utilisateur = session.utilisateur
     if not utilisateur.role.actif:
         raise AccesRefuse("Votre rôle est désactivé.")

@@ -355,9 +355,7 @@ class MetadonneesDocument(Strict):
 
 class CaptureCreation(Strict):
     personne_id: str
-    position_doigt: str = Field(
-        pattern=r"^(POUCE|INDEX|MAJEUR|ANNULAIRE|AURICULAIRE)_(DROIT|GAUCHE)$"
-    )
+    position_doigt: str = Field(pattern=r"^(POUCE|INDEX|MAJEUR|ANNULAIRE|AURICULAIRE)_(DROIT|GAUCHE)$")
     equipement: str = Field(min_length=2, max_length=120)
     fondement_legal: str = Field(min_length=10, max_length=2000)
     consentement_recueilli: bool

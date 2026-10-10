@@ -24,9 +24,16 @@ def test_production_refuse_configuration_faible():
 
 
 def test_production_conforme():
-    p = ParametresServeur(environnement="production", database_url="postgresql+psycopg://u:p@h/b",
-                          cles_donnees=f"k1:{generer_cle()}", cle_index=generer_cle(), cle_sauvegarde=generer_cle(),
-                          antivirus="clamd", biometrie_adaptateur="aucun", tls_termine_par_proxy=True)
+    p = ParametresServeur(
+        environnement="production",
+        database_url="postgresql+psycopg://u:p@h/b",
+        cles_donnees=f"k1:{generer_cle()}",
+        cle_index=generer_cle(),
+        cle_sauvegarde=generer_cle(),
+        antivirus="clamd",
+        biometrie_adaptateur="aucun",
+        tls_termine_par_proxy=True,
+    )
     assert verifier_configuration_production(p) == []
 
 

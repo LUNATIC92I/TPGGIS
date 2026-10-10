@@ -87,8 +87,14 @@ def initialiser_roles(bd: SessionBD) -> int:
     for definition in ROLES_INITIAUX:
         if bd.execute(select(Role.id).where(Role.code == definition["code"])).first():
             continue
-        role = Role(code=definition["code"], libelle=definition["libelle"], description=definition["description"],
-                    portee_defaut=definition["portee_defaut"], systeme=True, actif=True)
+        role = Role(
+            code=definition["code"],
+            libelle=definition["libelle"],
+            description=definition["description"],
+            portee_defaut=definition["portee_defaut"],
+            systeme=True,
+            actif=True,
+        )
         role.permissions = [RolePermission(permission=str(x)) for x in definition["permissions"]]
         bd.add(role)
         crees += 1

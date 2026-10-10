@@ -22,9 +22,12 @@ def _nombre_plaintes(app) -> int:
 def test_sauvegarde_puis_restauration(client, connexions, app, parametres):
     h = connexions.entetes("officier.ndj")
     plainte = client.get(f"{API}/plaintes", headers=h, params={"taille": 1}).json()["elements"][0]
-    doc = client.post(f"{API}/documents", headers=h, data={"intitule": "Pièce", "type_piece": "AUTRE",
-                                                           "plainte_id": plainte["id"]},
-                      files={"fichier": ("piece.txt", b"contenu de la piece fictive", "text/plain")}).json()
+    doc = client.post(
+        f"{API}/documents",
+        headers=h,
+        data={"intitule": "Pièce", "type_piece": "AUTRE", "plainte_id": plainte["id"]},
+        files={"fichier": ("piece.txt", b"contenu de la piece fictive", "text/plain")},
+    ).json()
     avant = _nombre_plaintes(app)
     dossier = sauvegarde.sauvegarder(parametres, "0001")
     assert (dossier / "base.enc").exists() and (dossier / "manifeste.hmac").exists()
@@ -32,8 +35,11 @@ def test_sauvegarde_puis_restauration(client, connexions, app, parametres):
     sauvegarde.verifier(parametres, dossier)
 
     # Incident : nouvelles donnees puis perte du stockage documentaire.
-    client.post(f"{API}/plaintes", headers=h, json={"service_enregistrement": "Accueil",
-                                                    "description": "Plainte créée après la sauvegarde."})
+    client.post(
+        f"{API}/plaintes",
+        headers=h,
+        json={"service_enregistrement": "Accueil", "description": "Plainte créée après la sauvegarde."},
+    )
     assert _nombre_plaintes(app) == avant + 1
     shutil.rmtree(parametres.repertoire_stockage)
 

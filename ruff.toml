@@ -1,0 +1,11 @@
+line-length = 120
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+ignore = ["S101", "S311", "S603", "S607", "B008", "E731", "UP017"]
+
+[lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S108", "E402", "B017"]
+"tpgis/server/database/seed/**" = ["S105"]
+"tpgis/server/database/migrations/**" = ["E501"]

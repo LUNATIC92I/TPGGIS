@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import io
 from datetime import date
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
@@ -18,7 +19,6 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from sqlalchemy.orm import Session as SessionBD
-from xml.sax.saxutils import escape
 
 from tpgis.server.config import ParametresServeur
 from tpgis.server.database.base import maintenant
@@ -61,14 +61,25 @@ def _document(bd: SessionBD, titre: str, numero: str, ctx: Contexte, corps: list
         canvas.drawRightString(A4[0] - 2 * cm, 1.2 * cm, f"Page {doc.page}")
         canvas.restoreState()
 
-    doc = SimpleDocTemplate(tampon, pagesize=A4, leftMargin=2 * cm, rightMargin=2 * cm, topMargin=1.5 * cm,
-                            bottomMargin=2 * cm, title=titre, author="TPGIS")
+    doc = SimpleDocTemplate(
+        tampon,
+        pagesize=A4,
+        leftMargin=2 * cm,
+        rightMargin=2 * cm,
+        topMargin=1.5 * cm,
+        bottomMargin=2 * cm,
+        title=titre,
+        author="TPGIS",
+    )
     elements = [_p(ligne, s["entete"]) for ligne in lire_parametre(bd, "institution.entete")]
     elements += [
         Spacer(1, 0.4 * cm),
         _p(titre, s["titre"]),
-        _p(f"Document n° {numero}  |  Généré le {maintenant():%d/%m/%Y à %H:%M} UTC par "
-           f"{ctx.utilisateur.grade or ''} {ctx.utilisateur.nom} ({ctx.utilisateur.identifiant})", s["petit"]),
+        _p(
+            f"Document n° {numero}  |  Généré le {maintenant():%d/%m/%Y à %H:%M} UTC par "
+            f"{ctx.utilisateur.grade or ''} {ctx.utilisateur.nom} ({ctx.utilisateur.identifiant})",
+            s["petit"],
+        ),
         Spacer(1, 0.3 * cm),
     ]
     doc.build(elements + corps, onFirstPage=_pied_page, onLaterPages=_pied_page)
@@ -111,23 +122,42 @@ def fiche_plainte(bd: SessionBD, ctx: Contexte, plainte_id: str) -> tuple[str, b
         _p(d["description"], s["normal"]),
     ]
     if d["personnes"]:
-        corps += [_p("Personnes concernées", s["sous_titre"]),
-                  _tableau([["N° interne", "Nom et prénoms", "Rôle procédural"]] + [
-                      [x["numero_interne"], f"{x['nom']} {x['prenoms'] or ''}",
-                       LIBELLES_ROLE_PERSONNE.get(x["role"], x["role"])] for x in d["personnes"]
-                  ], [3.5 * cm, 7 * cm, 6.5 * cm])]
+        corps += [
+            _p("Personnes concernées", s["sous_titre"]),
+            _tableau(
+                [["N° interne", "Nom et prénoms", "Rôle procédural"]]
+                + [
+                    [
+                        x["numero_interne"],
+                        f"{x['nom']} {x['prenoms'] or ''}",
+                        LIBELLES_ROLE_PERSONNE.get(x["role"], x["role"]),
+                    ]
+                    for x in d["personnes"]
+                ],
+                [3.5 * cm, 7 * cm, 6.5 * cm],
+            ),
+        ]
     corps += [
         Spacer(1, 0.4 * cm),
-        _p("Rappel : l'enregistrement d'une plainte ne vaut pas reconnaissance de culpabilité. Toute personne mise "
-           "en cause est présumée innocente tant que sa culpabilité n'a pas été établie par une juridiction.",
-           s["petit"]),
+        _p(
+            "Rappel : l'enregistrement d'une plainte ne vaut pas reconnaissance de culpabilité. Toute personne mise "
+            "en cause est présumée innocente tant que sa culpabilité n'a pas été établie par une juridiction.",
+            s["petit"],
+        ),
         Spacer(1, 1 * cm),
-        _tableau([["Signature du plaignant", "Signature et cachet de l'agent"], ["\n\n\n", "\n\n\n"]],
-                 [8.5 * cm, 8.5 * cm]),
+        _tableau(
+            [["Signature du plaignant", "Signature et cachet de l'agent"], ["\n\n\n", "\n\n\n"]], [8.5 * cm, 8.5 * cm]
+        ),
     ]
     contenu = _document(bd, "FICHE DE PLAINTE", numero, ctx, corps)
-    audit.enregistrer_ctx(bd, ctx, "EXPORT_FICHE_PLAINTE", type_ressource="plainte", ressource_id=plainte_id,
-                          details={"numero_document": numero})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "EXPORT_FICHE_PLAINTE",
+        type_ressource="plainte",
+        ressource_id=plainte_id,
+        details={"numero_document": numero},
+    )
     return f"{numero}.pdf", contenu
 
 
@@ -137,27 +167,55 @@ def bordereau_transmission(bd: SessionBD, ctx: Contexte, plainte_id: str) -> tup
     numero = prochain_numero(bd, "BT", None)
     s = _styles()
     corps = [
-        _tableau([
-            ["Expéditeur", d["unite_nom"]],
-            ["Destinataire", d["service_destinataire"] or "À compléter"],
-            ["Objet", f"Transmission de la plainte {d['numero']}"],
-            ["Motif", d["motif_statut"] or ""],
-        ], [5 * cm, 12 * cm], entete=False),
+        _tableau(
+            [
+                ["Expéditeur", d["unite_nom"]],
+                ["Destinataire", d["service_destinataire"] or "À compléter"],
+                ["Objet", f"Transmission de la plainte {d['numero']}"],
+                ["Motif", d["motif_statut"] or ""],
+            ],
+            [5 * cm, 12 * cm],
+            entete=False,
+        ),
         _p("Pièces transmises", s["sous_titre"]),
-        _tableau([["N°", "Désignation", "Nombre"], ["1", f"Fiche de plainte {d['numero']}", "1"],
-                  ["2", "Pièces justificatives (voir inventaire du dossier)", ""]], [1.5 * cm, 12 * cm, 3.5 * cm]),
+        _tableau(
+            [
+                ["N°", "Désignation", "Nombre"],
+                ["1", f"Fiche de plainte {d['numero']}", "1"],
+                ["2", "Pièces justificatives (voir inventaire du dossier)", ""],
+            ],
+            [1.5 * cm, 12 * cm, 3.5 * cm],
+        ),
         Spacer(1, 1.2 * cm),
-        _tableau([["Pour l'expéditeur (nom, grade, signature)", "Accusé de réception (date, signature)"],
-                  ["\n\n\n", "\n\n\n"]], [8.5 * cm, 8.5 * cm]),
+        _tableau(
+            [
+                ["Pour l'expéditeur (nom, grade, signature)", "Accusé de réception (date, signature)"],
+                ["\n\n\n", "\n\n\n"],
+            ],
+            [8.5 * cm, 8.5 * cm],
+        ),
     ]
     contenu = _document(bd, "BORDEREAU DE TRANSMISSION", numero, ctx, corps)
-    audit.enregistrer_ctx(bd, ctx, "EXPORT_BORDEREAU", type_ressource="plainte", ressource_id=plainte_id,
-                          details={"numero_document": numero})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "EXPORT_BORDEREAU",
+        type_ressource="plainte",
+        ressource_id=plainte_id,
+        details={"numero_document": numero},
+    )
     return f"{numero}.pdf", contenu
 
 
-def rapport_statistique_pdf(bd: SessionBD, ctx: Contexte, p: ParametresServeur, du: date | None, au: date | None,
-                            unite_id: str | None, categorie_id: str | None) -> tuple[str, bytes]:
+def rapport_statistique_pdf(
+    bd: SessionBD,
+    ctx: Contexte,
+    p: ParametresServeur,
+    du: date | None,
+    au: date | None,
+    unite_id: str | None,
+    categorie_id: str | None,
+) -> tuple[str, bytes]:
     ctx.exiger(Permission.EXPORT_REALISER, Permission.STATISTIQUES_LIRE)
     exiger_reauthentification_recente(ctx, p)
     stats = statistiques.tableau_de_bord(bd, ctx, du, au, unite_id, categorie_id)
@@ -165,33 +223,59 @@ def rapport_statistique_pdf(bd: SessionBD, ctx: Contexte, p: ParametresServeur, 
     s = _styles()
     i = stats["indicateurs"]
     corps = [
-        _p(f"Période : {du or 'origine'} au {au or 'ce jour'}  |  Données agrégées, sans information nominative.",
-           s["normal"]),
+        _p(
+            f"Période : {du or 'origine'} au {au or 'ce jour'}  |  Données agrégées, sans information nominative.",
+            s["normal"],
+        ),
         _p("Indicateurs", s["sous_titre"]),
-        _tableau([["Indicateur", "Valeur"],
-                  ["Plaintes enregistrées", i["plaintes_total"]],
-                  ["Plaintes en attente de traitement", i["plaintes_en_attente"]],
-                  ["En attente depuis plus de 30 jours", i["plaintes_en_attente_plus_30_jours"]],
-                  ["Dossiers en cours", i["dossiers_en_cours"]],
-                  ["Plaintes clôturées", i["plaintes_cloturees"]]], [11 * cm, 6 * cm]),
+        _tableau(
+            [
+                ["Indicateur", "Valeur"],
+                ["Plaintes enregistrées", i["plaintes_total"]],
+                ["Plaintes en attente de traitement", i["plaintes_en_attente"]],
+                ["En attente depuis plus de 30 jours", i["plaintes_en_attente_plus_30_jours"]],
+                ["Dossiers en cours", i["dossiers_en_cours"]],
+                ["Plaintes clôturées", i["plaintes_cloturees"]],
+            ],
+            [11 * cm, 6 * cm],
+        ),
         _p("Répartition par catégorie de faits", s["sous_titre"]),
-        _tableau([["Catégorie", "Nombre"]] + [[c["categorie"], c["nombre"]] for c in stats["par_categorie"]],
-                 [13 * cm, 4 * cm]),
+        _tableau(
+            [["Catégorie", "Nombre"]] + [[c["categorie"], c["nombre"]] for c in stats["par_categorie"]],
+            [13 * cm, 4 * cm],
+        ),
         _p("Évolution mensuelle", s["sous_titre"]),
-        _tableau([["Mois", "Plaintes"]] + [[m["mois"], m["nombre"]] for m in stats["evolution_mensuelle"]],
-                 [8.5 * cm, 8.5 * cm]),
+        _tableau(
+            [["Mois", "Plaintes"]] + [[m["mois"], m["nombre"]] for m in stats["evolution_mensuelle"]],
+            [8.5 * cm, 8.5 * cm],
+        ),
         _p("Qualité et complétude des données", s["sous_titre"]),
-        _tableau([["Mesure", "Taux (%)"]] + [[k.replace("_", " ").replace(" pct", ""), v]
-                                            for k, v in stats["qualite_donnees"].items()], [13 * cm, 4 * cm]),
+        _tableau(
+            [["Mesure", "Taux (%)"]]
+            + [[k.replace("_", " ").replace(" pct", ""), v] for k, v in stats["qualite_donnees"].items()],
+            [13 * cm, 4 * cm],
+        ),
     ]
     contenu = _document(bd, "RAPPORT STATISTIQUE D'ACTIVITÉ", numero, ctx, corps)
-    audit.enregistrer_ctx(bd, ctx, "EXPORT_RAPPORT_PDF", type_ressource="statistiques",
-                          details={"numero_document": numero, "du": du, "au": au})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "EXPORT_RAPPORT_PDF",
+        type_ressource="statistiques",
+        details={"numero_document": numero, "du": du, "au": au},
+    )
     return f"{numero}.pdf", contenu
 
 
-def export_statistiques_csv(bd: SessionBD, ctx: Contexte, p: ParametresServeur, du: date | None, au: date | None,
-                            unite_id: str | None, categorie_id: str | None) -> tuple[str, bytes]:
+def export_statistiques_csv(
+    bd: SessionBD,
+    ctx: Contexte,
+    p: ParametresServeur,
+    du: date | None,
+    au: date | None,
+    unite_id: str | None,
+    categorie_id: str | None,
+) -> tuple[str, bytes]:
     ctx.exiger(Permission.EXPORT_REALISER, Permission.STATISTIQUES_LIRE)
     exiger_reauthentification_recente(ctx, p)
     stats = statistiques.tableau_de_bord(bd, ctx, du, au, unite_id, categorie_id)
@@ -211,7 +295,12 @@ def export_statistiques_csv(bd: SessionBD, ctx: Contexte, p: ParametresServeur, 
     for k, v in stats["qualite_donnees"].items():
         w.writerow(["qualite", k, v])
     numero = prochain_numero(bd, "EX", None)
-    audit.enregistrer_ctx(bd, ctx, "EXPORT_STATISTIQUES_CSV", type_ressource="statistiques",
-                          details={"numero_document": numero, "du": du, "au": au})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "EXPORT_STATISTIQUES_CSV",
+        type_ressource="statistiques",
+        details={"numero_document": numero, "du": du, "au": au},
+    )
     # BOM UTF 8 pour une ouverture correcte dans les tableurs Windows.
     return f"{numero}.csv", ("﻿" + tampon.getvalue()).encode("utf-8")

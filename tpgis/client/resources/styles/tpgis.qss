@@ -1,0 +1,90 @@
+/* Charte graphique TPGIS : bleu nuit, gris anthracite, blanc, touches de bleu clair. */
+
+QWidget {
+    font-family: "Segoe UI", "Noto Sans", "DejaVu Sans", sans-serif;
+    font-size: 10pt;
+    color: #1E2329;
+    background-color: #F4F6F9;
+}
+
+QMainWindow, QDialog { background-color: #F4F6F9; }
+
+/* Bandeau superieur */
+#bandeau { background-color: #0B1F3A; min-height: 56px; }
+#bandeau QLabel { color: #FFFFFF; background: transparent; }
+#titreApplication { font-size: 13pt; font-weight: 600; letter-spacing: 1px; }
+#sousTitreApplication { color: #9FC3E8; font-size: 9pt; }
+#infoUtilisateur { color: #D6E8F7; font-size: 9pt; }
+#bandeau QPushButton {
+    background-color: transparent; color: #FFFFFF; border: 1px solid #3B5878;
+    border-radius: 4px; padding: 5px 12px;
+}
+#bandeau QPushButton:hover { background-color: #1A3557; }
+
+/* Navigation laterale */
+#navigation {
+    background-color: #2B2F36; border: none; color: #E6E9EF; outline: 0;
+    padding-top: 8px; font-size: 10pt;
+}
+#navigation::item { padding: 10px 14px; border-left: 3px solid transparent; }
+#navigation::item:hover { background-color: #353A42; }
+#navigation::item:selected { background-color: #0B1F3A; border-left: 3px solid #5DA9E9; color: #FFFFFF; }
+
+/* Titres de page */
+#titrePage { font-size: 15pt; font-weight: 600; color: #0B1F3A; background: transparent; }
+#sousTitrePage { color: #5A6472; background: transparent; }
+
+/* Cartes et panneaux */
+#carteIndicateur, #panneau {
+    background-color: #FFFFFF; border: 1px solid #DDE2EA; border-radius: 6px;
+}
+#valeurIndicateur { font-size: 20pt; font-weight: 600; color: #0B1F3A; background: transparent; }
+#libelleIndicateur { color: #5A6472; font-size: 9pt; background: transparent; }
+
+/* Boutons */
+QPushButton {
+    background-color: #FFFFFF; color: #0B1F3A; border: 1px solid #B8C4D4;
+    border-radius: 4px; padding: 6px 14px; min-height: 18px;
+}
+QPushButton:hover { background-color: #EAF3FC; border-color: #5DA9E9; }
+QPushButton:pressed { background-color: #D6E8F7; }
+QPushButton:disabled { color: #9AA3AE; background-color: #F0F2F5; border-color: #DDE2EA; }
+QPushButton#boutonPrincipal { background-color: #0B1F3A; color: #FFFFFF; border-color: #0B1F3A; }
+QPushButton#boutonPrincipal:hover { background-color: #17375F; }
+QPushButton#boutonDanger { color: #8E1B1B; border-color: #D9A3A3; }
+QPushButton#boutonDanger:hover { background-color: #FBEDED; }
+
+/* Champs */
+QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QDateEdit, QDateTimeEdit, QSpinBox {
+    background-color: #FFFFFF; border: 1px solid #C3CCD8; border-radius: 4px; padding: 4px 6px;
+    selection-background-color: #5DA9E9;
+}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QDateEdit:focus {
+    border: 1px solid #5DA9E9;
+}
+QLineEdit[obligatoire="true"] { border-left: 3px solid #5DA9E9; }
+
+/* Tableaux */
+QTableView {
+    background-color: #FFFFFF; alternate-background-color: #F7F9FC; border: 1px solid #DDE2EA;
+    gridline-color: #EDF0F4; selection-background-color: #D6E8F7; selection-color: #0B1F3A;
+}
+QHeaderView::section {
+    background-color: #E6EBF2; color: #2B2F36; padding: 6px; border: none;
+    border-right: 1px solid #D3DAE4; font-weight: 600;
+}
+
+QTabWidget::pane { border: 1px solid #DDE2EA; background: #FFFFFF; border-radius: 4px; }
+QTabBar::tab { background: #E6EBF2; padding: 7px 14px; border-top-left-radius: 4px; border-top-right-radius: 4px; }
+QTabBar::tab:selected { background: #FFFFFF; color: #0B1F3A; font-weight: 600; }
+
+QGroupBox { border: 1px solid #DDE2EA; border-radius: 6px; margin-top: 14px; background: #FFFFFF; }
+QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: #0B1F3A; font-weight: 600; }
+
+QStatusBar { background: #E6EBF2; color: #2B2F36; }
+QToolTip { background-color: #0B1F3A; color: #FFFFFF; border: none; padding: 5px; }
+
+#avertissement {
+    background-color: #FFF7E0; border: 1px solid #E8C96A; border-radius: 4px; padding: 6px; color: #5C4600;
+}
+#messageErreur { color: #8E1B1B; background: transparent; }

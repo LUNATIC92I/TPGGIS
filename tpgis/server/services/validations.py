@@ -45,8 +45,9 @@ def serialiser(d: DemandeValidation) -> dict:
     }
 
 
-def creer_demande(bd: SessionBD, ctx: Contexte, type_action: TypeValidation, charge: dict, resume: str,
-                  motif: str) -> dict:
+def creer_demande(
+    bd: SessionBD, ctx: Contexte, type_action: TypeValidation, charge: dict, resume: str, motif: str
+) -> dict:
     d = DemandeValidation(
         type_action=type_action,
         charge_utile=charge,
@@ -58,8 +59,14 @@ def creer_demande(bd: SessionBD, ctx: Contexte, type_action: TypeValidation, cha
     )
     bd.add(d)
     bd.flush()
-    audit.enregistrer_ctx(bd, ctx, "VALIDATION_DEMANDE", type_ressource="demande_validation", ressource_id=d.id,
-                          details={"type_action": str(type_action), "resume": resume})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "VALIDATION_DEMANDE",
+        type_ressource="demande_validation",
+        ressource_id=d.id,
+        details={"type_action": str(type_action), "resume": resume},
+    )
     return serialiser(d)
 
 
@@ -109,8 +116,15 @@ def decider(bd: SessionBD, ctx: Contexte, demande_id: str, approuver: bool, comm
     if d.statut != StatutValidation.EN_ATTENTE:
         raise Conflit("Cette demande a déjà été traitée.")
     if d.demandeur_id == ctx.uid:
-        audit.enregistrer_ctx(bd, ctx, "VALIDATION_DECISION", resultat="REFUS", type_ressource="demande_validation",
-                              ressource_id=d.id, details={"raison": "auto_validation"})
+        audit.enregistrer_ctx(
+            bd,
+            ctx,
+            "VALIDATION_DECISION",
+            resultat="REFUS",
+            type_ressource="demande_validation",
+            ressource_id=d.id,
+            details={"raison": "auto_validation"},
+        )
         bd.commit()
         raise AccesRefuse("Une demande ne peut pas être validée par son auteur (double validation).")
     ctx.exiger(PERMISSION_APPROBATION[TypeValidation(d.type_action)])
@@ -123,6 +137,12 @@ def decider(bd: SessionBD, ctx: Contexte, demande_id: str, approuver: bool, comm
         demandeur = bd.get(Utilisateur, d.demandeur_id)
         d.resultat = _executer(bd, ctx, d, demandeur)
         d.statut = StatutValidation.EXECUTEE
-    audit.enregistrer_ctx(bd, ctx, "VALIDATION_DECISION", type_ressource="demande_validation", ressource_id=d.id,
-                          details={"approuvee": approuver, "type_action": d.type_action})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "VALIDATION_DECISION",
+        type_ressource="demande_validation",
+        ressource_id=d.id,
+        details={"approuvee": approuver, "type_action": d.type_action},
+    )
     return serialiser(d)

@@ -178,9 +178,14 @@ def enregistrer(bd: SessionBD, ctx: Contexte, p: ParametresServeur, donnees: sch
     )
     bd.add(capture)
     bd.flush()
-    audit.enregistrer_ctx(bd, ctx, "BIOMETRIE_ENREGISTREMENT", type_ressource="capture_biometrique",
-                          ressource_id=capture.id,
-                          details={"personne_id": personne.id, "adaptateur": a.nom, "doigt": donnees.position_doigt})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "BIOMETRIE_ENREGISTREMENT",
+        type_ressource="capture_biometrique",
+        ressource_id=capture.id,
+        details={"personne_id": personne.id, "adaptateur": a.nom, "doigt": donnees.position_doigt},
+    )
     return serialiser(capture)
 
 
@@ -190,12 +195,23 @@ def lister(bd: SessionBD, ctx: Contexte, personne_id: str) -> list[dict]:
     ctx.exiger(Permission.BIOMETRIE_LIRE)
     _exiger_finalite(ctx)
     personne = obtenir_personne(bd, ctx, personne_id)
-    captures = bd.execute(
-        select(CaptureBiometrique).where(CaptureBiometrique.personne_id == personne.id)
-        .order_by(CaptureBiometrique.collectee_le)
-    ).scalars().all()
-    audit.enregistrer_ctx(bd, ctx, "BIOMETRIE_CONSULTATION", type_ressource="personne", ressource_id=personne.id,
-                          details={"captures": len(captures)})
+    captures = (
+        bd.execute(
+            select(CaptureBiometrique)
+            .where(CaptureBiometrique.personne_id == personne.id)
+            .order_by(CaptureBiometrique.collectee_le)
+        )
+        .scalars()
+        .all()
+    )
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "BIOMETRIE_CONSULTATION",
+        type_ressource="personne",
+        ressource_id=personne.id,
+        details={"captures": len(captures)},
+    )
     return [serialiser(c) for c in captures]
 
 
@@ -220,10 +236,21 @@ def verifier(bd: SessionBD, ctx: Contexte, p: ParametresServeur, donnees: schema
     if c.adaptateur != a.nom:
         raise Conflit("Capture enregistrée avec un autre système biométrique.")
     r = a.verifier(c.reference_modele, donnees.equipement)
-    ev = audit.enregistrer_ctx(bd, ctx, "BIOMETRIE_VERIFICATION", type_ressource="capture_biometrique",
-                               ressource_id=c.id, details={"concordance": r.concordance, "score": r.score})
-    return {"concordance": r.concordance, "score": r.score, "commentaire": r.commentaire,
-            "synthetique": a.synthetique, "trace_audit": ev.trace_id}
+    ev = audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "BIOMETRIE_VERIFICATION",
+        type_ressource="capture_biometrique",
+        ressource_id=c.id,
+        details={"concordance": r.concordance, "score": r.score},
+    )
+    return {
+        "concordance": r.concordance,
+        "score": r.score,
+        "commentaire": r.commentaire,
+        "synthetique": a.synthetique,
+        "trace_audit": ev.trace_id,
+    }
 
 
 def recherche_un_contre_n(p: ParametresServeur) -> None:
@@ -243,12 +270,19 @@ def demander_suppression(bd: SessionBD, ctx: Contexte, capture_id: str, motif: s
     c = _capture_accessible(bd, ctx, capture_id)
     if c.statut != StatutCapture.ACTIVE:
         raise Conflit("Capture déjà supprimée.")
-    return creer_demande(bd, ctx, TypeValidation.SUPPRESSION_CAPTURE_BIOMETRIQUE, {"capture_id": c.id},
-                         f"Suppression de la capture biométrique {c.id[:8]}", motif)
+    return creer_demande(
+        bd,
+        ctx,
+        TypeValidation.SUPPRESSION_CAPTURE_BIOMETRIQUE,
+        {"capture_id": c.id},
+        f"Suppression de la capture biométrique {c.id[:8]}",
+        motif,
+    )
 
 
-def executer_suppression(bd: SessionBD, ctx: Contexte, capture_id: str, motif: str,
-                         p: ParametresServeur | None = None) -> str:
+def executer_suppression(
+    bd: SessionBD, ctx: Contexte, capture_id: str, motif: str, p: ParametresServeur | None = None
+) -> str:
     from tpgis.server.config import obtenir_parametres
 
     c = bd.get(CaptureBiometrique, capture_id)
@@ -262,6 +296,12 @@ def executer_suppression(bd: SessionBD, ctx: Contexte, capture_id: str, motif: s
     c.statut = StatutCapture.SUPPRIMEE
     c.supprimee_le = maintenant()
     c.motif_suppression = motif
-    audit.enregistrer_ctx(bd, ctx, "BIOMETRIE_SUPPRESSION", type_ressource="capture_biometrique",
-                          ressource_id=c.id, details={"motif": motif})
+    audit.enregistrer_ctx(
+        bd,
+        ctx,
+        "BIOMETRIE_SUPPRESSION",
+        type_ressource="capture_biometrique",
+        ressource_id=c.id,
+        details={"motif": motif},
+    )
     return "Capture biométrique supprimée."

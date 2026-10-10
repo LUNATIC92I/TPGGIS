@@ -15,7 +15,7 @@ Plateforme institutionnelle de gestion des plaintes, des faits signalés, des pe
 | Client de bureau Windows 10 et 11 | PySide6 (Qt 6), QSS, carte vectorielle native | `tpgis/client` |
 | Éléments partagés (énumérations, permissions, schémas, données géographiques) | Python | `tpgis/shared` |
 | Données de démonstration synthétiques | Générateur reproductible | `tpgis/server/database/seed` |
-| Tests automatisés (114) | pytest | `tests` |
+| Tests automatisés (118) | pytest | `tests` |
 | Installateur Windows | PyInstaller et Inno Setup | `deployment/windows` |
 | Déploiement serveur | systemd, nginx (TLS), nftables, PostgreSQL | `deployment/server` |
 | Documentation | Markdown | `docs` |
@@ -41,7 +41,7 @@ TPGIS_TEST_DATABASE_URL=postgresql+psycopg://... python -m pytest (PostgreSQL, b
 TPGIS_TEST_CLAMD_SOCKET=/run/clamav/clamd.ctl python -m pytest    (avec un démon ClamAV réel)
 ```
 
-Résultat de la dernière exécution : 114 tests réussis sous Python 3.12.3 et 3.13 sur SQLite, et sur PostgreSQL 16.15. Le détail figure dans [docs/fonctionnalites_testees.md](docs/fonctionnalites_testees.md).
+Résultat de la dernière exécution : 118 tests réussis sous Python 3.12.3 et 3.13 sur SQLite, et sur PostgreSQL 16.15. Le détail figure dans [docs/fonctionnalites_testees.md](docs/fonctionnalites_testees.md).
 
 ## Documentation
 

@@ -1,0 +1,75 @@
+# Fonctionnalités réellement testées
+
+Ce document distingue ce qui a été **exécuté et vérifié** de ce qui ne l'a pas été. Toutes les vérifications ont utilisé des données synthétiques.
+
+## 1. Exécutions de référence (10 octobre 2026)
+
+| Campagne | Environnement | Résultat |
+|---|---|---|
+| Suite complète sur SQLite | Python 3.13.16, Linux | 118 tests réussis (avec démon ClamAV réel) |
+| Suite complète sur PostgreSQL 16.15 | Python 3.13.16, Linux | 118 tests réussis |
+| Suite complète sur SQLite, dépendances verrouillées | Python 3.12.3, Linux | 118 tests réussis |
+| Linter et règles de sécurité (Ruff, sous ensemble Bandit) | Python 3.13 | Aucun écart |
+| Audit des dépendances (`pip-audit`) | requirements-dev.txt | Aucune vulnérabilité connue |
+| Performances sur 200 000 plaintes et 100 000 personnes | PostgreSQL 16.15 | Voir [performances.md](performances.md) |
+
+Commande : `QT_QPA_PLATFORM=offscreen python -m pytest` (ajouter `TPGIS_TEST_DATABASE_URL` pour PostgreSQL et `TPGIS_TEST_CLAMD_SOCKET` pour ClamAV).
+
+## 2. Correspondance avec les tests obligatoires du cahier des charges
+
+| Exigence | Tests automatisés |
+|---|---|
+| Création d'une plainte | `test_creation_plainte_numero_unique_et_statut_initial`, `test_creation_avec_personnes_et_roles`, `test_parcours_enregistrement_plainte` (interface) |
+| Modification d'un dossier | `test_modification_avec_controle_de_version`, `test_modification_dossier_et_actes`, `test_cloture_exige_motif_et_habilitation`, `test_transitions_interdites_et_transmission` |
+| Recherche par numéro | `test_recherche_par_numero`, `test_separation_des_donnees_entre_unites` (numéro hors périmètre non révélé) |
+| Détection de doublons | `test_detection_doublons_et_validation_humaine`, `test_homonymie_seule_ne_cree_pas_de_correspondance_forte`, `test_score_doublons_multi_attributs`, `test_fusion_soumise_a_double_validation` |
+| Contrôles d'accès | `tests/security/test_controle_acces.py` (21 tests), `test_navigation_filtree_selon_les_droits` |
+| Séparation des données entre unités | `test_separation_des_donnees_entre_unites`, `test_creation_pour_une_autre_unite_refusee`, `test_responsable_voit_unites_subordonnees`, `test_enqueteur_limite_aux_dossiers_attribues`, `test_carte_agregats_par_province_et_filtres` |
+| Révocation d'un compte | `test_desactivation_revoque_immediatement`, `test_revocation_administrative_des_sessions` |
+| Validation des fichiers | `test_extension_et_signature_controlees`, `test_taille_maximale_configurable`, `test_fichier_infecte_jamais_disponible`, `test_signatures_valides`, `test_signatures_invalides`, `test_demon_clamd_reel`, `test_antivirus_indisponible_piece_bloquee` |
+| Journalisation des consultations sensibles | `test_consultation_sensible_journalisee_avec_finalite`, `test_recherche_journalisee`, `test_refus_journalises`, `test_journal_sans_secret` |
+| Sauvegardes et restaurations | `test_sauvegarde_puis_restauration`, `test_sauvegarde_alteree_refusee`, `test_restauration_refusee_dans_un_autre_environnement`, `test_chiffrement_par_blocs_aller_retour` |
+| Erreurs réseau | `test_serveur_injoignable`, `test_delai_depasse`, `test_certificat_non_reconnu_refuse`, `test_erreurs_api_traduites` |
+| Gestion des sessions | `test_connexion_et_deconnexion`, `test_expiration_et_inactivite`, `test_jeton_stocke_sous_forme_d_empreinte`, `test_changement_mot_de_passe_obligatoire`, `test_enrolement_mfa_exige_pour_nouveau_compte_privilegie`, `test_operation_critique_exige_reauthentification` |
+| Migration de la base de données | `test_migration_montee_et_descente`, `test_schema_conforme_aux_modeles` |
+| Tests négatifs par appel direct de l'API | `test_acces_sans_authentification_refuse`, `test_jeton_invente_refuse`, `test_admin_technique_sans_acces_aux_dossiers`, `test_admin_fonctionnel_sans_acces_aux_donnees_operationnelles`, `test_agent_accueil_sans_biometrie`, `test_auditeur_ne_peut_pas_modifier`, `test_consultation_seule_ne_peut_pas_ecrire`, `test_recherche_nationale_reservee`, `test_injection_sql_inoperante`, `test_elevation_privileges_par_attribution_role_refusee` |
+
+## 3. Autres fonctionnalités vérifiées
+
+| Fonctionnalité | Vérification |
+|---|---|
+| Force brute (mot de passe, code MFA, confirmation d'identité) | `test_verrouillage_apres_echecs_repetes`, `test_codes_mfa_errones_verrouillent_le_compte`, `test_reauthentification_par_force_brute_bloquee`, `test_limitation_debit_connexion`, `test_message_identique_compte_inconnu` |
+| MFA, anti rejeu, secret chiffré | `test_mfa_obligatoire_pour_compte_privilegie`, `test_rejeu_code_mfa_refuse`, `test_totp_anti_rejeu`, `test_secret_totp_chiffre_au_repos` |
+| Chiffrement au repos, rotation, index aveugle | `test_chiffrement_aller_retour_et_rotation`, `test_alteration_detectee`, `test_index_aveugle_normalise`, `test_depot_et_telechargement_avec_integrite` |
+| Journal d'audit chaîné et immuable | `test_chaine_integre_puis_alteration_detectee`, `test_journal_non_modifiable`, `test_changement_de_droits_journalise` |
+| Versions de pièces et contrôle d'accès par dossier | `test_versions_et_acces_selon_dossier` |
+| Biométrie simulée (1 pour 1, finalité, recherche désactivée) | `test_biometrie_simulee_verification_un_pour_un`, `test_biometrie_exige_finalite`, `test_suppression_capture_double_validation` |
+| Faits : nature de l'information, absence de score | `test_fait_decision_judiciaire_exige_reference` |
+| Référentiel des catégories administrable | `test_categories_administrables_sans_code` |
+| Statistiques exactes et sans données nominatives | `test_tableau_de_bord_calcule_sur_donnees_reelles`, `test_statistiques_sans_donnees_nominatives`, `test_seuil_de_confidentialite` |
+| Exports réservés et tracés, CSV neutralisé | `test_exports_reserves_et_traces`, `test_cellules_csv_neutralisees` |
+| Documents PDF (fiche, bordereau, rapport) | `test_fiche_et_bordereau_pdf`, `test_exports_reserves_et_traces` |
+| Pagination et validation des entrées | `test_pagination`, `test_validation_entrees` |
+| Garde fous de production et séparation des environnements | `tests/unit/test_configuration.py` |
+| Interface : 13 modules chargés pour 5 rôles, sans erreur | `test_toutes_les_pages_se_chargent` |
+| Interface : carte alimentée (22 provinces, unités), indicateurs | `test_tableau_de_bord_et_carte_alimentes` |
+| Interface : erreurs serveur affichées dans le formulaire | `test_formulaire_affiche_erreur_serveur` |
+
+## 4. Vérifications manuelles réalisées
+
+| Vérification | Résultat |
+|---|---|
+| Serveur en HTTPS (certificats de démonstration), client avec l'autorité de l'institution | TLS 1.3 négocié ; connexion refusée sans l'autorité |
+| Parcours client réel asynchrone en TLS : connexion, MFA, tableau de bord, plaintes, carte, recherche | Réussi, captures dans `docs/captures` |
+| Script de démonstration complet `scripts/lancer_demo.sh` | Réussi jusqu'à l'ouverture du client |
+| Outil `tpgis-admin` sur PostgreSQL : initialisation, chargement, sauvegarde, vérification, restauration, vérification d'audit | Réussi |
+| Construction de l'exécutable PyInstaller (sous Linux, pour valider le fichier de construction) | Réussi : ressources et carte embarquées, aucun composant serveur inclus, démarrage constaté |
+
+## 5. Ce qui n'a PAS été exécuté dans cet environnement
+
+1. **L'installateur Windows** (`installateur.iss`) et l'exécutable Windows n'ont pas été construits ni lancés sous Windows 10 ou 11 : l'environnement de développement était Linux. Le workflow `.github/workflows/construction-windows.yml` et le script `construire.ps1` sont fournis pour cette construction ; un essai sur postes Windows réels reste à faire, y compris l'affichage à différentes résolutions et mises à l'échelle.
+2. **Le fond de carte raster en ligne** (couche de tuiles) n'a pas été essayé avec un fournisseur réel.
+3. **ClamAV avec les signatures officielles** : le démon réel a été testé avec une signature locale EICAR, le téléchargement des signatures officielles étant bloqué dans l'environnement de développement.
+4. **Le déploiement systemd, nginx et nftables** n'a pas été exécuté sur un serveur cible ; les fichiers sont fournis comme modèles.
+5. **La saisie au clavier et à la souris** de l'interface n'a pas été éprouvée par des utilisateurs ; les tests pilotent les composants par programme.
+6. **Les performances en réseau réel** (latence, TLS, plusieurs postes simultanés) restent à mesurer sur l'infrastructure cible.

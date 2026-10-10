@@ -190,11 +190,12 @@ def test_formulaire_affiche_erreur_serveur(qapp, client, connexions, messages):
     assert formulaire.resultat is None
 
 
-def test_captures_ecran_documentation(qapp, client, connexions, messages):
+def test_captures_ecran_documentation(qapp, client, connexions, messages, tmp_path):
     """Produit les captures d'ecran de la documentation (donnees synthetiques)."""
     from pathlib import Path
 
-    cible = Path(__file__).resolve().parents[2] / "docs" / "captures"
+    # Captures ecrites dans un dossier temporaire (TPGIS_CAPTURES pour un autre dossier).
+    cible = Path(os.environ.get("TPGIS_CAPTURES", tmp_path))
     cible.mkdir(parents=True, exist_ok=True)
     fenetre = FenetrePrincipale(_session(client, connexions, "responsable.ndj"))
     fenetre.resize(1440, 860)

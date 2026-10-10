@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session as SessionBD
 from tpgis.server.config import ParametresServeur
 from tpgis.server.database.base import maintenant, nouvel_id
 from tpgis.server.database.models import Document, Personne, VersionDocument
-from tpgis.server.security.crypto import chiffreur
+from tpgis.server.security.crypto import ErreurChiffrement, chiffreur
 from tpgis.server.services import audit
 from tpgis.server.services.antivirus import creer_analyseur
 from tpgis.server.services.commun import historiser, lire_parametre
@@ -290,7 +290,9 @@ def telecharger(bd: SessionBD, ctx: Contexte, p: ParametresServeur, document_id:
         donnees = chiffreur().dechiffrer_octets(version.cle_id, chemin.read_bytes())
     except FileNotFoundError as exc:
         raise ErreurMetier("Fichier absent du stockage sécurisé. Contactez l'administration.") from exc
-    if hashlib.sha256(donnees).hexdigest() != version.sha256:
+    except ErreurChiffrement:
+        donnees = None
+    if donnees is None or hashlib.sha256(donnees).hexdigest() != version.sha256:
         audit.enregistrer_ctx(bd, ctx, "DOCUMENT_INTEGRITE", resultat="ECHEC", type_ressource="document",
                               ressource_id=doc.id)
         bd.commit()

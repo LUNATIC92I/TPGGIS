@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -54,7 +55,7 @@ def _reponse_erreur(request: Request, statut: int, message: str, code: str, deta
     contenu = {"detail": message, "code": code, "trace_id": getattr(request.state, "trace_id", None)}
     if details:
         contenu["details"] = details
-    return JSONResponse(status_code=statut, content=contenu)
+    return JSONResponse(status_code=statut, content=jsonable_encoder(contenu))
 
 
 def _tracer_refus(request: Request, exc: ErreurMetier) -> None:

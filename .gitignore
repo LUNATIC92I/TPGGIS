@@ -1,0 +1,23 @@
+# Environnements et caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Donnees locales : jamais versionnees (cles, bases, stockage, sauvegardes)
+var/
+*.sqlite3
+*.sqlite3-*
+.env
+*.pem
+*.key
+cles_*.json
+
+# Construction Windows
+build/
+dist/
+*.spec.bak
+deployment/windows/sortie/

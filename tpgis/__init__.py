@@ -1,0 +1,3 @@
+"""TCHAD POLICE & GENDARMERIE INFORMATION SYSTEM (TPGIS)."""
+
+__version__ = "0.1.0"

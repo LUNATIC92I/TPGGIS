@@ -1,0 +1,39 @@
+# Serveur applicatif TPGIS : versions verrouillees, testees avec Python 3.12 et 3.13.
+# Mise a jour : modifier, executer pip-audit et la suite de tests complete, puis valider.
+fastapi==0.143.0
+starlette==1.7.0
+annotated-doc==0.0.5
+opentelemetry-api==1.45.1
+pydantic==2.14.0
+pydantic_core==2.50.0
+pydantic-settings==2.15.0
+python-dotenv==1.2.4
+annotated-types==0.8.0
+typing_extensions==4.16.0
+typing-inspection==0.4.4
+anyio==4.15.1
+idna==3.20
+uvicorn==0.54.0
+h11==0.16.0
+click==8.5.0
+httptools==0.9.0
+watchfiles==1.3.0
+websockets==17.2
+PyYAML==6.0.3
+SQLAlchemy==2.1.4
+alembic==1.20.0
+Mako==1.4.3
+MarkupSafe==3.0.4
+psycopg==3.3.6
+psycopg-binary==3.3.6
+argon2-cffi==25.1.0
+argon2-cffi-bindings==26.1.0
+cffi==2.1.1
+pycparser==3.11
+cryptography==50.0.2
+PyOTP==2.10.0
+python-multipart==0.0.32
+reportlab==5.0.1
+pillow==12.3.0
+charset-normalizer==3.5.2
+uvloop==0.23.0 ; sys_platform != 'win32'

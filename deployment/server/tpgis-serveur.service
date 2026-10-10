@@ -1,0 +1,38 @@
+# Service systemd du serveur applicatif TPGIS.
+# Installation : /etc/systemd/system/tpgis-serveur.service puis
+#   systemctl daemon-reload && systemctl enable --now tpgis-serveur
+[Unit]
+Description=TPGIS serveur applicatif (API securisee)
+After=network-online.target postgresql.service clamav-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tpgis
+Group=tpgis
+WorkingDirectory=/opt/tpgis
+EnvironmentFile=/etc/tpgis/tpgis.env
+ExecStart=/opt/tpgis/venv/bin/tpgis-serveur
+Restart=on-failure
+RestartSec=5
+
+# Durcissement
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+ReadWritePaths=/var/lib/tpgis /var/backups/tpgis /opt/tpgis/var
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

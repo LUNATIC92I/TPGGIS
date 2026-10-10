@@ -77,6 +77,38 @@ def test_delai_depasse():
     serveur.close()
 
 
+def test_certificat_non_reconnu_refuse(tmp_path):
+    """Un serveur presentant un certificat d'une autorite inconnue est refuse."""
+    import ssl
+    import subprocess
+    import sys
+    import time
+    from pathlib import Path
+
+    racine = Path(__file__).resolve().parents[2]
+    subprocess.run([sys.executable, str(racine / "scripts" / "generer_certificats_demo.py"), str(tmp_path)], check=True)
+    contexte = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    contexte.load_cert_chain(tmp_path / "serveur.crt", tmp_path / "serveur.key")
+    serveur = socket.socket()
+    serveur.bind(("127.0.0.1", 0))
+    serveur.listen(1)
+
+    def _accepter():
+        try:
+            conn, _ = serveur.accept()
+            with contexte.wrap_socket(conn, server_side=True):
+                time.sleep(0.5)
+        except (ssl.SSLError, OSError):
+            pass
+
+    threading.Thread(target=_accepter, daemon=True).start()
+    api = ClientAPI(f"https://127.0.0.1:{serveur.getsockname()[1]}", delai=3)
+    with pytest.raises(ErreurReseau) as exc:
+        api.verifier_disponibilite()
+    assert exc.value.code == "CERTIFICAT_INVALIDE"
+    serveur.close()
+
+
 def test_erreurs_api_traduites(client, donnees):
     api = ClientAPI("http://testserver", http=client)
     with pytest.raises(ErreurAPI) as exc:

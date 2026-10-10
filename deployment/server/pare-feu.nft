@@ -1,0 +1,21 @@
+# Regles nftables d'exemple pour le serveur central TPGIS.
+# Seul HTTPS est ouvert, et uniquement depuis les reseaux institutionnels.
+# Le port PostgreSQL 5432 n'est jamais ouvert vers l'exterieur.
+table inet tpgis {
+    set reseaux_institutionnels {
+        type ipv4_addr; flags interval;
+        elements = { 10.0.0.0/8 }   # A ADAPTER
+    }
+    set administration {
+        type ipv4_addr; flags interval;
+        elements = { 10.10.0.0/24 } # postes d'administration, A ADAPTER
+    }
+    chain entree {
+        type filter hook input priority 0; policy drop;
+        iif lo accept
+        ct state established,related accept
+        ip saddr @reseaux_institutionnels tcp dport 443 accept
+        ip saddr @administration tcp dport 22 accept
+        icmp type echo-request limit rate 5/second accept
+    }
+}

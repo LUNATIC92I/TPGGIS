@@ -1,0 +1,43 @@
+# Integration continue : linter, audit des dependances et tests complets
+# sur SQLite puis PostgreSQL 16. Donnees exclusivement synthetiques.
+name: Tests TPGIS
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tpgis
+          POSTGRES_PASSWORD: tpgis_ci
+          POSTGRES_DB: tpgis_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tpgis" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Bibliotheques systeme pour Qt hors ecran
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 postgresql-client
+      - name: Dependances verrouillees
+        run: pip install -r requirements-dev.txt
+      - name: Linter
+        run: ruff check tpgis tests scripts && ruff format --check tpgis tests scripts
+      - name: Audit des dependances vulnerables
+        run: pip-audit -r requirements-dev.txt
+      - name: Tests sur SQLite
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest
+      - name: Tests sur PostgreSQL
+        env:
+          QT_QPA_PLATFORM: offscreen
+          TPGIS_TEST_DATABASE_URL: postgresql+psycopg://tpgis:tpgis_ci@localhost:5432/tpgis_test
+        run: python -m pytest

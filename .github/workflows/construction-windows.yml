@@ -1,0 +1,37 @@
+# Construction du client Windows et de son installateur Inno Setup.
+name: Client Windows
+
+on:
+  workflow_dispatch:
+    inputs:
+      serveur:
+        description: "Adresse HTTPS du serveur institutionnel inscrite dans client.ini"
+        default: "https://tpgis.institution.td"
+  push:
+    tags: ["v*"]
+
+jobs:
+  construire:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dependances du client et tests de l'interface
+        run: |
+          pip install -r requirements-dev.txt
+          python -m pytest tests/client tests/unit
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - name: Executable PyInstaller
+        run: pyinstaller --noconfirm --clean deployment/windows/tpgis_client.spec
+      - name: Installateur Inno Setup
+        run: |
+          choco install innosetup --no-progress -y
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DServeur=${{ github.event.inputs.serveur || 'https://tpgis.institution.td' }}" deployment\windows\installateur.iss
+          Get-FileHash deployment\windows\sortie\*.exe -Algorithm SHA256 | Format-List
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TPGIS-Client-Windows
+          path: deployment/windows/sortie/*.exe

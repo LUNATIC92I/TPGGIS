@@ -1,0 +1,26 @@
+[project]
+name = "tpgis"
+version = "0.1.0"
+description = "TCHAD POLICE & GENDARMERIE INFORMATION SYSTEM : plateforme institutionnelle de gestion des plaintes, procédures et statistiques"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Propriété institutionnelle, diffusion restreinte" }
+
+[project.scripts]
+tpgis-serveur = "tpgis.server.main:lancer"
+tpgis-admin = "tpgis.server.cli:main"
+
+[project.gui-scripts]
+tpgis-client = "tpgis.client.main:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["tpgis*"]
+
+[tool.setuptools.package-data]
+"tpgis.shared" = ["geodata/*"]
+"tpgis.client" = ["resources/**/*"]
+"tpgis.server.database" = ["migrations/*", "migrations/versions/*"]

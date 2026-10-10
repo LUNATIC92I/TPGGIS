@@ -112,6 +112,12 @@ class ClientAPI:
                 methode, self._prefixe + chemin, headers=self._entetes(authentifie, finalite), **kwargs
             )
         except httpx.ConnectError as exc:
+            if "CERTIFICATE_VERIFY_FAILED" in str(exc) or "certificate" in str(exc).lower():
+                raise ErreurReseau(
+                    "Le certificat du serveur n'a pas pu être vérifié. La connexion a été interrompue pour "
+                    "protéger vos données (risque d'interception). Contactez l'administration technique.",
+                    code="CERTIFICAT_INVALIDE",
+                ) from exc
             raise ErreurReseau(
                 "Le serveur TPGIS est injoignable. Vérifiez la connexion au réseau institutionnel ou "
                 "contactez l'administration technique.",

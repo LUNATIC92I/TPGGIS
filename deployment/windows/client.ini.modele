@@ -1,0 +1,17 @@
+; Configuration du poste client TPGIS (aucun secret).
+; Deployee par l'installateur dans le dossier du programme.
+[serveur]
+; Adresse HTTPS du serveur institutionnel (obligatoirement https://)
+url = https://tpgis.institution.td
+; Certificat de l'autorite de certification de l'institution (facultatif si
+; l'AC est deja installee dans le magasin Windows)
+certificat_ca =
+delai_secondes = 30
+
+[carte]
+; Fond de carte raster facultatif. Laisser vide pour le mode hors ligne
+; (carte vectorielle embarquee). N'utiliser qu'un fournisseur valide.
+; Exemples : https://tuiles.institution.td/{z}/{x}/{y}.png
+;            fichier:C:/TPGIS/tuiles/{z}/{x}/{y}.png
+url_tuiles =
+attribution =

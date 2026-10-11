@@ -23,7 +23,9 @@ jobs:
           pip install -r requirements-dev.txt
           python -m pytest tests/client tests/unit
         env:
-          QT_QPA_PLATFORM: offscreen
+          # Affichage Windows reel (police Segoe UI et moteur de rendu du systeme) :
+          # le mode offscreen ne reproduit pas les metriques de police de Windows.
+          QT_QPA_PLATFORM: windows
       - name: Executable PyInstaller
         run: pyinstaller --noconfirm --clean deployment/windows/tpgis_client.spec
       - name: Installateur Inno Setup
@@ -42,7 +44,7 @@ jobs:
           pyinstaller --noconfirm --clean deployment/windows/tpgis_demonstration.spec
           Get-FileHash dist\TPGIS_Demonstration.exe -Algorithm SHA256 | Format-List
         env:
-          QT_QPA_PLATFORM: offscreen
+          QT_QPA_PLATFORM: windows
       - uses: actions/upload-artifact@v4
         with:
           name: TPGIS-Demonstration-Windows

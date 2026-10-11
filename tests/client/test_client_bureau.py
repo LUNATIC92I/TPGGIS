@@ -224,11 +224,12 @@ def test_aucun_bouton_tronque_a_la_taille_minimale(qapp, client, connexions, mes
             fenetre.navigation.setCurrentRow(i)
             qapp.processEvents()
             page = fenetre.pages.currentWidget()
-            # Independant de la police : la page ne doit pas exiger plus que la place disponible.
-            if page.minimumSizeHint().width() > page.width():
+            # A la taille nominale, la page tient dans la zone visible sans defilement horizontal.
+            visible = fenetre.defilement.viewport().width()
+            if page.minimumSizeHint().width() > visible:
                 tronques.append(
-                    (identifiant, fenetre.navigation.item(i).text(), "page trop large",
-                     f"minimum {page.minimumSizeHint().width()} > {page.width()}")
+                    (identifiant, fenetre.navigation.item(i).text(), "defilement horizontal",
+                     f"minimum {page.minimumSizeHint().width()} > {visible}")
                 )  # fmt: skip
             for bouton in page.findChildren(QPushButton):
                 if bouton.isVisible() and bouton.width() < bouton.minimumSizeHint().width() - 1:

@@ -193,3 +193,6 @@ QToolTip { background-color: {{info_bulle_fond}}; color: {{info_bulle_texte}}; b
 #nomDecor { color: {{navigation_texte}}; font-size: 24pt; font-weight: 700; letter-spacing: 2px; }
 #texteDecor { color: {{navigation_texte}}; font-size: {{police_titre_section}}pt; font-weight: 600; }
 #texteDecorSecondaire { color: {{navigation_indicateur}}; font-size: {{police_petite}}pt; }
+
+/* Zone des pages : sans cadre, meme fond que l'application */
+#defilementPages, #defilementPages > QWidget > QWidget { background-color: {{fond}}; border: none; }

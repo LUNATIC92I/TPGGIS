@@ -5,12 +5,14 @@ from __future__ import annotations
 from PySide6.QtCore import QSettings, QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QApplication,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
     QPushButton,
+    QScrollArea,
     QStackedWidget,
     QStatusBar,
     QVBoxLayout,
@@ -71,8 +73,15 @@ class FenetrePrincipale(QMainWindow):
         self.navigation.setIconSize(QSize(cote, cote))
         self.navigation.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.pages = QStackedWidget()
+        # Filet de securite pour les polices agrandies ou les mises a l'echelle extremes :
+        # une barre de defilement apparait plutot que des boutons tronques.
+        self.defilement = QScrollArea()
+        self.defilement.setObjectName("defilementPages")
+        self.defilement.setWidget(self.pages)
+        self.defilement.setWidgetResizable(True)
+        self.defilement.setFrameShape(QFrame.NoFrame)
         corps.addWidget(self.navigation)
-        corps.addWidget(self.pages, 1)
+        corps.addWidget(self.defilement, 1)
         couche.addLayout(corps, 1)
         self.setCentralWidget(central)
         self.setStatusBar(QStatusBar())

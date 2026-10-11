@@ -6,7 +6,7 @@ Ce document distingue ce qui a été **exécuté et vérifié** de ce qui ne l'a
 
 | Campagne | Environnement | Résultat |
 |---|---|---|
-| Suite complète sur SQLite, après la charte graphique (11 octobre 2026) | Python 3.13.16, Linux | 140 tests réussis, 1 ignoré (démon ClamAV réel non fourni pour cette exécution) |
+| Suite complète sur SQLite, après la charte graphique et l'exécutable de démonstration (11 octobre 2026) | Python 3.13.16, Linux | 143 tests réussis, 1 ignoré (démon ClamAV réel non fourni pour cette exécution) |
 | Suite complète sur SQLite | Python 3.13.16, Linux | 121 tests réussis (avec démon ClamAV réel) |
 | Suite complète sur PostgreSQL 16.15 | Python 3.13.16, Linux | 121 tests réussis |
 | Suite complète sur SQLite, dépendances verrouillées | Python 3.12.3, Linux | 121 tests réussis |
@@ -101,3 +101,21 @@ Banc d'essai : Linux, Wine 9.0, Python 3.12.10 officiel pour Windows, dépendanc
 Deux fonctions de Windows absentes de Wine 9 ont dû être simulées **uniquement sur le banc d'essai** (jamais dans la livraison) : la bibliothèque ICU du système (`icuuc.dll`, redirigée vers ICU 78) et quatre fonctions de profils de couleur (`mscms.dll`). Ces composants sont présents nativement sur Windows 10 (version 1703 et suivantes) et Windows 11.
 
 Défauts trouvés et corrigés grâce à ce banc : extensions Qt non garanties dans l'exécutable (désormais collectées explicitement), barres d'actions tronquées à la taille minimale de fenêtre (réorganisées, test automatique ajouté), étiquettes de mois superposées sur le graphique, absence du bandeau d'environnement de démonstration, message d'erreur de proxy peu explicite.
+
+## 7. Exécutable de démonstration en un clic (11 octobre 2026)
+
+Banc d'essai identique au paragraphe 6 (Wine 9, Python 3.12.10 pour Windows, PyInstaller 6.22.3), dépendances du client et du serveur verrouillées.
+
+| Étape | Résultat |
+|---|---|
+| Construction de `TPGIS_Demonstration.exe` avec `deployment/windows/tpgis_demonstration.spec` | Réussie : un seul fichier PE32+ x86-64 graphique d'environ 62 Mo |
+| Premier lancement sur un poste vierge (double clic simulé) | Écran d'attente, création du dossier `%LOCALAPPDATA%\TPGIS_Demonstration` (base, clés, certificats), données fictives générées, serveur HTTPS sur 127.0.0.1 ; écran de connexion affiché après 15 secondes |
+| Lancement suivant | Écran de connexion affiché après 13 secondes, données conservées |
+| Connexion assistée (`responsable.ndj`, bouton « Remplir » puis « Se connecter ») | Code MFA courant renseigné, connexion acceptée, tableau de bord, carte et mentions « Chiffres fictifs » affichés |
+| « Se déconnecter » puis « Quitter » | Serveur local arrêté (journal `demonstration.log`), processus terminés 6 secondes après « Quitter » |
+
+Tests automatisés associés : `tests/client/test_demonstration_autonome.py` (serveur local TLS limité à 127.0.0.1, connexion assistée avec MFA, aide absente hors démonstration).
+
+Non vérifié : poste Windows 10 ou 11 réel, comportement de SmartScreen face à l'exécutable non signé, et durée de démarrage hors Wine. Le premier affichage est précédé de quelques secondes sans fenêtre, le temps que l'exécutable unique décompresse ses composants.
+
+![Connexion assistée de l'exécutable de démonstration](captures/windows_demonstration_connexion.png)

@@ -35,3 +35,15 @@ jobs:
         with:
           name: TPGIS-Client-Windows
           path: deployment/windows/sortie/*.exe
+      - name: Executable de demonstration autonome (un seul fichier, donnees fictives)
+        run: |
+          pip install -r requirements-serveur.txt
+          python -m pytest tests/client/test_demonstration_autonome.py
+          pyinstaller --noconfirm --clean deployment/windows/tpgis_demonstration.spec
+          Get-FileHash dist\TPGIS_Demonstration.exe -Algorithm SHA256 | Format-List
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TPGIS-Demonstration-Windows
+          path: dist/TPGIS_Demonstration.exe

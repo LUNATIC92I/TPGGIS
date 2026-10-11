@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QDialog,
     QFormLayout,
     QHBoxLayout,
@@ -20,6 +24,16 @@ from tpgis.client.theme import identite
 from tpgis.client.theme.bigarre import PanneauBigarre
 
 
+@dataclass(frozen=True)
+class CompteDemo:
+    """Compte fictif propose par l'executable de demonstration (jamais en production)."""
+
+    identifiant: str
+    libelle: str
+    mot_de_passe: str
+    code_mfa: Callable[[], str] | None = None
+
+
 def _champ_secret(placeholder: str = "") -> QLineEdit:
     champ = QLineEdit()
     champ.setEchoMode(QLineEdit.Password)
@@ -30,10 +44,17 @@ def _champ_secret(placeholder: str = "") -> QLineEdit:
 class DialogueConnexion(QDialog):
     """Ecran de connexion : panneau decoratif bigarre a gauche, formulaire sur fond uni a droite."""
 
-    def __init__(self, api: ClientAPI, environnement: str = "", parent=None):
+    def __init__(
+        self,
+        api: ClientAPI,
+        environnement: str = "",
+        parent=None,
+        comptes_demo: list[CompteDemo] | None = None,
+    ):
         super().__init__(parent)
         self.api = api
         self.resultat: dict | None = None
+        self.comptes_demo = comptes_demo if environnement == "demonstration" else None
         ident = identite()
         self.setWindowTitle(f"{ident.nom} : connexion sécurisée")
         self.setMinimumSize(780, 460)
@@ -98,6 +119,8 @@ class DialogueConnexion(QDialog):
         self.libelle_mfa.hide()
         self.code_mfa.hide()
         couche.addLayout(formulaire)
+        if self.comptes_demo:
+            couche.addLayout(self._aide_demonstration())
         self.message = QLabel("")
         self.message.setObjectName("messageErreur")
         self.message.setWordWrap(True)
@@ -118,6 +141,30 @@ class DialogueConnexion(QDialog):
         boutons.addWidget(self.valider)
         couche.addLayout(boutons)
         racine.addWidget(panneau, 1)
+
+    def _aide_demonstration(self) -> QHBoxLayout:
+        """Executable de demonstration uniquement : remplit un compte fictif et son code MFA courant."""
+        ligne = QHBoxLayout()
+        ligne.addWidget(QLabel("Compte fictif"))
+        self.choix_compte = QComboBox()
+        for compte in self.comptes_demo:
+            self.choix_compte.addItem(compte.libelle, compte)
+        ligne.addWidget(self.choix_compte, 1)
+        remplir = QPushButton("Remplir")
+        remplir.setToolTip("Renseigne l'identifiant, le mot de passe et, si nécessaire, le code MFA du compte fictif")
+        remplir.clicked.connect(self.remplir_compte_demo)
+        ligne.addWidget(remplir)
+        return ligne
+
+    def remplir_compte_demo(self) -> None:
+        compte: CompteDemo = self.choix_compte.currentData()
+        self.identifiant.setText(compte.identifiant)
+        self.mot_de_passe.setText(compte.mot_de_passe)
+        code = compte.code_mfa() if compte.code_mfa else ""
+        self.code_mfa.setText(code)
+        self.libelle_mfa.setVisible(bool(code))
+        self.code_mfa.setVisible(bool(code))
+        self.valider.setFocus()
 
     def connecter(self) -> None:
         self.message.setText("")

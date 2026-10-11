@@ -54,10 +54,10 @@ def appliquer_identite(config: ConfigurationClient) -> None:
     )
 
 
-def ouvrir_session(api: ClientAPI, parent=None, environnement: str = "") -> SessionClient | None:
+def ouvrir_session(api: ClientAPI, parent=None, environnement: str = "", comptes_demo=None) -> SessionClient | None:
     """Connexion complete : identifiants, MFA, changement de mot de passe, enrolement."""
     while True:
-        dialogue = DialogueConnexion(api, environnement, parent)
+        dialogue = DialogueConnexion(api, environnement, parent, comptes_demo=comptes_demo)
         if dialogue.exec() != QDialog.Accepted:
             return None
         type_session = dialogue.resultat["type_session"]
@@ -75,11 +75,16 @@ def ouvrir_session(api: ClientAPI, parent=None, environnement: str = "") -> Sess
         )
 
 
-def main(config: ConfigurationClient | None = None) -> int:
+def creer_application_qt() -> QApplication:
     declarer_extensions_qt()
     QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-    app = QApplication(sys.argv)
+    app = QApplication.instance() or QApplication(sys.argv)
     app.setOrganizationName("TPGIS")
+    return app
+
+
+def main(config: ConfigurationClient | None = None, comptes_demo=None) -> int:
+    app = creer_application_qt()
     config = config or charger_configuration()
     appliquer_identite(config)
     app.setApplicationName(identite().nom)
@@ -110,7 +115,7 @@ def main(config: ConfigurationClient | None = None) -> int:
 
     fenetre = None
     while True:
-        session = ouvrir_session(api, environnement=sante.get("environnement", ""))
+        session = ouvrir_session(api, environnement=sante.get("environnement", ""), comptes_demo=comptes_demo)
         if session is None:
             return 0
         fenetre = FenetrePrincipale(session, config)

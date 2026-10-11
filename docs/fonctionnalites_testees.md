@@ -119,3 +119,22 @@ Tests automatisés associés : `tests/client/test_demonstration_autonome.py` (se
 Non vérifié : poste Windows 10 ou 11 réel, comportement de SmartScreen face à l'exécutable non signé, et durée de démarrage hors Wine. Le premier affichage est précédé de quelques secondes sans fenêtre, le temps que l'exécutable unique décompresse ses composants.
 
 ![Connexion assistée de l'exécutable de démonstration](captures/windows_demonstration_connexion.png)
+
+## 8. Construction et tests sur Windows réel (workflow GitHub, 11 octobre 2026)
+
+Exécuteur `windows-2022` de GitHub Actions, Python 3.12.10, workflow `construction-windows.yml` (exécution n° 3, réussie).
+
+| Étape | Résultat |
+|---|---|
+| Tests du client et tests unitaires avec l'affichage Qt natif de Windows (police Segoe UI) | Réussis |
+| Exécutable du client et installateur Inno Setup | Construits ; empreinte SHA 256 de l'installateur : `1B7F83BA29915AD6FA99037FB950EDA09716D640F9DABA7A4053CF8A82EFC5D8` |
+| Tests du lanceur de démonstration (serveur local TLS, connexion assistée avec MFA) | 3 tests réussis |
+| `TPGIS_Demonstration.exe` | Construit ; empreinte SHA 256 : `98DA09A322B70BBCC36DEB30F13E6137E455D3D5AA2189842F49910CF951BCBC` |
+
+Défauts révélés par les deux premières exécutions et corrigés :
+
+1. Plusieurs pages exigeaient une largeur supérieure à la fenêtre minimale, à cause des listes déroulantes dimensionnées sur leur plus long libellé : boutons tronqués. Listes rétrécissables, options de la carte sur deux lignes, actions des comptes sur deux colonnes, et zone défilante en dernier recours.
+2. Le test du serveur injoignable supposait un refus immédiat de connexion ; Windows met environ 2 secondes à le signaler.
+3. Le mode « offscreen » de Qt n'utilise pas les polices de Windows : les tests de l'interface s'exécutent désormais avec l'affichage natif.
+
+Les exécutables produits n'ont pas été lancés sur ce poste (pas de session graphique interactive) ; leur exécution est vérifiée sous Wine (paragraphes 6 et 7).

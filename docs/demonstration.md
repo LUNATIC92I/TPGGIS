@@ -27,6 +27,8 @@ Fonctionnement :
 | Séparation | Environnement `demonstration` : mentions « Chiffres fictifs » partout, base marquée synthétique et refusée par un serveur de production. L'aide **Compte fictif** n'existe que dans cet environnement. |
 | Système | Windows 10 (version 1809 et suivantes) ou Windows 11, 64 bits. L'exécutable n'est pas signé : Windows SmartScreen peut afficher « Windows a protégé votre ordinateur » ; cliquez sur « Informations complémentaires » puis « Exécuter quand même », après avoir vérifié l'empreinte SHA 256 publiée avec le fichier. |
 
+Téléchargement : page GitHub Actions du dépôt, workflow « Client Windows », dernière exécution réussie, artefact `TPGIS-Demonstration-Windows` (archive zip contenant l'exécutable ; connexion à GitHub requise, conservation 90 jours).
+
 Construction : `deployment\windows\construire_demonstration.ps1` sur un poste Windows, ou le workflow `construction-windows.yml` (artefact `TPGIS-Demonstration-Windows`). Fichier de construction : `deployment/windows/tpgis_demonstration.spec`.
 
 Cet exécutable est réservé à la démonstration et à la formation. Le déploiement institutionnel utilise le client seul (`TPGIS.exe` et son installateur) relié au serveur central.

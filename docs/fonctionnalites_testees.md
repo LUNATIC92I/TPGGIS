@@ -108,7 +108,7 @@ Banc d'essai identique au paragraphe 6 (Wine 9, Python 3.12.10 pour Windows, PyI
 
 | Étape | Résultat |
 |---|---|
-| Construction de `TPGIS_Demonstration.exe` avec `deployment/windows/tpgis_demonstration.spec` | Réussie : un seul fichier PE32+ x86-64 graphique d'environ 62 Mo |
+| Construction de `TPGIS_Demonstration.exe` avec `deployment/windows/tpgis_demonstration.spec` | Réussie : un seul fichier PE32+ x86-64 graphique d'environ 49 Mo (rendu OpenGL logiciel, extension Direct2D et codec AVIF inutiles retirés), vérifié à nouveau après cet allègement |
 | Premier lancement sur un poste vierge (double clic simulé) | Écran d'attente, création du dossier `%LOCALAPPDATA%\TPGIS_Demonstration` (base, clés, certificats), données fictives générées, serveur HTTPS sur 127.0.0.1 ; écran de connexion affiché après 15 secondes |
 | Lancement suivant | Écran de connexion affiché après 13 secondes, données conservées |
 | Connexion assistée (`responsable.ndj`, bouton « Remplir » puis « Se connecter ») | Code MFA courant renseigné, connexion acceptée, tableau de bord, carte et mentions « Chiffres fictifs » affichés |

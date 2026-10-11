@@ -43,11 +43,16 @@ a = Analysis(
     + collect_submodules("alembic", filter=lambda nom: ".testing" not in nom)
     + ["sqlalchemy.dialects.sqlite", "argon2", "pyotp", "multipart"],
     excludes=[
-        "psycopg", "psycopg_binary", "uvloop", "tkinter", "PySide6.QtWebEngineCore", "PySide6.Qt3DCore",
+        "psycopg", "psycopg_binary", "uvloop", "tkinter", "watchfiles", "PIL._avif", "PIL._webp", "PySide6.QtWebEngineCore", "PySide6.Qt3DCore",
         "PySide6.QtQuick", "PySide6.QtQml", "pytest",
     ],
     noarchive=False,
 )
+# Composants inutiles a une interface a base de widgets : rendu OpenGL logiciel
+# (21 Mo) et extension d'affichage Direct2D (qwindows suffit).
+INUTILES = ("opengl32sw.dll", "qdirect2d.dll")
+a.binaries = [b for b in a.binaries if Path(b[0]).name.lower() not in INUTILES]
+
 pyz = PYZ(a.pure)
 exe = EXE(
     pyz,

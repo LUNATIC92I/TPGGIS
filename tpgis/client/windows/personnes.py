@@ -473,9 +473,14 @@ class PagePersonnes(Page):
         fusion.setEnabled(session.a("personne.fusionner"))
         fusion.clicked.connect(self.fusion)
         barre.addWidget(self.texte, 1)
-        for b in (chercher, nouvelle, ouvrir, doublons, fusion):
-            barre.addWidget(b)
+        barre.addWidget(chercher)
+        barre.addWidget(nouvelle)
         self.couche.addLayout(barre)
+        actions = QHBoxLayout()
+        for b in (ouvrir, doublons, fusion):
+            actions.addWidget(b)
+        actions.addStretch()
+        self.couche.addLayout(actions)
         self.tableau = TableauDonnees(COLONNES_PERSONNES)
         self.tableau.ligne_activee.connect(self.ouvrir)
         self.tableau.page_demandee.connect(self.charger)

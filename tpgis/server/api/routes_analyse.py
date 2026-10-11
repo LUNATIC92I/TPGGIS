@@ -84,12 +84,18 @@ def sante(request: Request):
         etat_base = "disponible"
     except Exception:
         etat_base = "indisponible"
-    return {
+    reponse = {
         "application": "TPGIS",
         "version": __version__,
         "base_de_donnees": etat_base,
         "statut": "ok" if etat_base == "disponible" else "degrade",
     }
+    p = request.app.state.parametres
+    if not p.est_production:
+        # Permet au client d'afficher clairement un environnement de test ou de
+        # demonstration ; jamais indique en production.
+        reponse["environnement"] = str(p.environnement)
+    return reponse
 
 
 @routeur.get("/systeme/etat", tags=["Supervision"])

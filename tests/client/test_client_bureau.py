@@ -206,3 +206,45 @@ def test_captures_ecran_documentation(qapp, client, connexions, messages, tmp_pa
         qapp.processEvents()
         assert fenetre.grab().save(str(cible / f"{nom}.png"))
     fenetre.close()
+
+
+def test_aucun_bouton_tronque_a_la_taille_minimale(qapp, client, connexions, messages):
+    """Exigence d'adaptation aux resolutions : a la taille minimale de la fenetre
+    (1100 x 680), aucun bouton visible n'est plus etroit que son contenu."""
+    from PySide6.QtWidgets import QPushButton
+
+    tronques = []
+    for identifiant in ("responsable.ndj", "admin.fonctionnel", "auditeur"):
+        fenetre = FenetrePrincipale(_session(client, connexions, identifiant))
+        fenetre.resize(fenetre.minimumSize())
+        fenetre.show()
+        for i in range(fenetre.navigation.count()):
+            fenetre.navigation.setCurrentRow(i)
+            qapp.processEvents()
+            page = fenetre.pages.currentWidget()
+            for bouton in page.findChildren(QPushButton):
+                if bouton.isVisible() and bouton.width() < bouton.minimumSizeHint().width() - 1:
+                    tronques.append((identifiant, fenetre.navigation.item(i).text(), bouton.text()))
+        fenetre.close()
+    assert tronques == [], "\n".join(map(str, tronques))
+
+
+def test_environnement_signale_hors_production(qapp, client, donnees):
+    from tpgis.client.windows.connexion import DialogueConnexion
+
+    sante = ClientAPI("http://testserver", http=client).verifier_disponibilite()
+    assert sante["environnement"] == "test"
+    dialogue = DialogueConnexion(ClientAPI("http://testserver", http=client), sante["environnement"])
+    assert any("TEST" in label.text() for label in dialogue.findChildren(type(dialogue.message)))
+
+
+def test_erreur_de_proxy_traduite():
+    import httpx
+
+    def refuser(request):
+        raise httpx.ProxyError("503 Service Unavailable", request=request)
+
+    api = ClientAPI("https://tpgis.institution.td", http=httpx.Client(transport=httpx.MockTransport(refuser)))
+    with pytest.raises(ErreurReseau) as exc:
+        api.verifier_disponibilite()
+    assert exc.value.code == "SERVEUR_INJOIGNABLE" and "proxy" in str(exc.value)

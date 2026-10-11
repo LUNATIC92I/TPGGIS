@@ -16,4 +16,4 @@
 | 12 | **Haute disponibilité et site de secours** | Modèle décrit dans [deploiement_multisite.md](deploiement_multisite.md) | Réplication PostgreSQL, archivage continu WAL, exercices de bascule |
 | 13 | **Limitation de débit partagée** pour plusieurs instances applicatives | En mémoire du processus | Magasin partagé si plusieurs instances sont déployées |
 | 14 | **Postes hors ligne** | Non implémenté, désactivé par défaut | Uniquement après une étude dédiée (voir [deploiement_multisite.md](deploiement_multisite.md)) |
-| 15 | **Construction et essai de l'installateur sous Windows 10 et 11** | Fichiers de construction fournis, exécutable validé sous Linux | Construction sur poste Windows, signature, tests sur les postes types et résolutions du parc |
+| 15 | **Construction et essai de l'installateur sous Windows 10 et 11** | Exécutable et installateur construits, installés, exécutés et désinstallés sous Wine 9 ([fonctionnalites_testees.md](fonctionnalites_testees.md)) | Signature de code, essai sur postes Windows 10 et 11 réels du parc (résolutions et mises à l'échelle) |

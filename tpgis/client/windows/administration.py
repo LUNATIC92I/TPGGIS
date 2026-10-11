@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QDoubleSpinBox,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -155,23 +156,33 @@ class PageUtilisateurs(Page):
         self.texte.returnPressed.connect(lambda: self.charger(1))
         barre.addWidget(self.texte, 1)
         gerer = session.a("utilisateur.gerer")
-        for libelle, rappel in (
-            ("Rechercher", lambda: self.charger(1)),
-            ("Nouveau compte", self.creer),
-            ("Changer le rôle", self.changer_role),
-            ("Désactiver", self.desactiver),
-            ("Réactiver", self.reactiver),
-            ("Révoquer les sessions", self.revoquer),
-            ("Réinitialiser le mot de passe", self.reinitialiser),
-            ("Réinitialiser la MFA", self.reinitialiser_mfa),
-        ):
+
+        def bouton(libelle, rappel, actif=True, nom_objet=None):
             b = QPushButton(libelle)
             b.clicked.connect(rappel)
-            b.setEnabled(libelle == "Rechercher" or gerer)
-            if libelle == "Désactiver":
-                b.setObjectName("boutonDanger")
-            barre.addWidget(b)
+            b.setEnabled(actif)
+            if nom_objet:
+                b.setObjectName(nom_objet)
+            return b
+
+        barre.addWidget(bouton("Rechercher", lambda: self.charger(1)))
+        barre.addWidget(bouton("Nouveau compte", self.creer, gerer, "boutonPrincipal"))
         c.addLayout(barre)
+        # Actions sur le compte selectionne, sur deux lignes pour rester lisibles
+        # a la largeur minimale de la fenetre.
+        actions = QGridLayout()
+        for indice, (libelle, rappel, nom_objet) in enumerate(
+            (
+                ("Changer le rôle", self.changer_role, None),
+                ("Révoquer les sessions", self.revoquer, None),
+                ("Réinitialiser le mot de passe", self.reinitialiser, None),
+                ("Réactiver", self.reactiver, None),
+                ("Réinitialiser la MFA", self.reinitialiser_mfa, None),
+                ("Désactiver", self.desactiver, "boutonDanger"),
+            )
+        ):
+            actions.addWidget(bouton(libelle, rappel, gerer, nom_objet), indice // 3, indice % 3)
+        c.addLayout(actions)
         self.tableau = TableauDonnees(
             [
                 ("identifiant", "Identifiant", None),

@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 Write-Host "1. Environnement de construction isole"
 Invoke-Expression "$Python -m venv .venv-construction"
 & .\.venv-construction\Scripts\python.exe -m pip install --upgrade pip
-& .\.venv-construction\Scripts\pip.exe install -r requirements-client.txt pyinstaller==6.22.3 pyinstaller-hooks-contrib==2026.8 pytest==9.1.1
+& .\.venv-construction\Scripts\pip.exe install -r requirements-client.txt pyinstaller==6.22.3 pyinstaller-hooks-contrib==2026.8 altgraph==0.17.5 pefile==2024.8.26 pywin32-ctypes==0.2.3 pytest==9.1.1
 
 Write-Host "2. Tests du client (sans serveur reel)"
 & .\.venv-construction\Scripts\python.exe -c "import tpgis.client.main"

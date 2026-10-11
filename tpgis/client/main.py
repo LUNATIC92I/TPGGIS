@@ -17,6 +17,20 @@ from tpgis.client.windows.connexion import DialogueChangementMotDePasse, Dialogu
 from tpgis.client.windows.principale import FenetrePrincipale
 
 
+def declarer_extensions_qt() -> None:
+    """Executable autonome : indique a Qt l'emplacement des extensions embarquees."""
+    base = getattr(sys, "_MEIPASS", None)
+    if not base:
+        return
+    from pathlib import Path
+
+    from PySide6.QtCore import QCoreApplication
+
+    for candidat in (Path(base) / "PySide6" / "plugins", Path(base) / "PySide6" / "Qt" / "plugins"):
+        if candidat.exists():
+            QCoreApplication.addLibraryPath(str(candidat))
+
+
 def appliquer_theme(app: QApplication) -> None:
     app.setStyle("Fusion")
     app.setStyleSheet(chemin_ressource("styles/tpgis.qss").read_text(encoding="utf-8"))
@@ -43,6 +57,7 @@ def ouvrir_session(api: ClientAPI, parent=None, environnement: str = "") -> Sess
 
 
 def main(config: ConfigurationClient | None = None) -> int:
+    declarer_extensions_qt()
     QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
     app.setApplicationName("TPGIS")
@@ -75,7 +90,7 @@ def main(config: ConfigurationClient | None = None) -> int:
 
     fenetre = None
     while True:
-        session = ouvrir_session(api)
+        session = ouvrir_session(api, environnement=sante.get("environnement", ""))
         if session is None:
             return 0
         fenetre = FenetrePrincipale(session, config)

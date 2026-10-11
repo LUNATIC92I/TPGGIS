@@ -6,9 +6,9 @@ Ce document distingue ce qui a été **exécuté et vérifié** de ce qui ne l'a
 
 | Campagne | Environnement | Résultat |
 |---|---|---|
-| Suite complète sur SQLite | Python 3.13.16, Linux | 118 tests réussis (avec démon ClamAV réel) |
-| Suite complète sur PostgreSQL 16.15 | Python 3.13.16, Linux | 118 tests réussis |
-| Suite complète sur SQLite, dépendances verrouillées | Python 3.12.3, Linux | 118 tests réussis |
+| Suite complète sur SQLite | Python 3.13.16, Linux | 121 tests réussis (avec démon ClamAV réel) |
+| Suite complète sur PostgreSQL 16.15 | Python 3.13.16, Linux | 121 tests réussis |
+| Suite complète sur SQLite, dépendances verrouillées | Python 3.12.3, Linux | 121 tests réussis |
 | Linter et règles de sécurité (Ruff, sous ensemble Bandit) | Python 3.13 | Aucun écart |
 | Audit des dépendances (`pip-audit`) | requirements-dev.txt | Aucune vulnérabilité connue |
 | Performances sur 200 000 plaintes et 100 000 personnes | PostgreSQL 16.15 | Voir [performances.md](performances.md) |
@@ -67,9 +67,27 @@ Commande : `QT_QPA_PLATFORM=offscreen python -m pytest` (ajouter `TPGIS_TEST_DAT
 
 ## 5. Ce qui n'a PAS été exécuté dans cet environnement
 
-1. **L'installateur Windows** (`installateur.iss`) et l'exécutable Windows n'ont pas été construits ni lancés sous Windows 10 ou 11 : l'environnement de développement était Linux. Le workflow `.github/workflows/construction-windows.yml` et le script `construire.ps1` sont fournis pour cette construction ; un essai sur postes Windows réels reste à faire, y compris l'affichage à différentes résolutions et mises à l'échelle.
+1. **Windows 10 et 11 réels** : l'exécutable et l'installateur ont été construits et exécutés sous Wine 9 (voir le paragraphe 6), pas sur des postes Windows réels. Un essai sur les postes types du parc reste à faire, notamment la mise à l'échelle des écrans haute densité et la signature de code.
 2. **Le fond de carte raster en ligne** (couche de tuiles) n'a pas été essayé avec un fournisseur réel.
 3. **ClamAV avec les signatures officielles** : le démon réel a été testé avec une signature locale EICAR, le téléchargement des signatures officielles étant bloqué dans l'environnement de développement.
 4. **Le déploiement systemd, nginx et nftables** n'a pas été exécuté sur un serveur cible ; les fichiers sont fournis comme modèles.
 5. **La saisie au clavier et à la souris** de l'interface n'a pas été éprouvée par des utilisateurs ; les tests pilotent les composants par programme.
 6. **Les performances en réseau réel** (latence, TLS, plusieurs postes simultanés) restent à mesurer sur l'infrastructure cible.
+
+## 6. Construction et exécution Windows sous Wine (11 octobre 2026)
+
+Banc d'essai : Linux, Wine 9.0, Python 3.12.10 officiel pour Windows, dépendances verrouillées, PyInstaller 6.22.3, Inno Setup 6.7.3.
+
+| Étape | Résultat |
+|---|---|
+| Construction de `TPGIS.exe` avec `deployment/windows/tpgis_client.spec` | Réussie, sans avertissement : exécutable PE32+ x86-64 graphique, 96 Mo, extensions Qt embarquées |
+| Compilation de l'installateur avec `installateur.iss` | Réussie : `TPGIS_Client_0.1.0_Installation.exe`, 29 Mo |
+| Installation silencieuse (`/VERYSILENT /TASKS=bureau`) | Programme dans `Program Files\TPGIS`, `client.ini` contenant l'adresse fournie à la compilation, raccourcis bureau et menu Démarrer |
+| Lancement, serveur injoignable | Message explicite « Serveur indisponible », arrêt propre |
+| Lancement, `client.ini` pointant vers le serveur de démonstration TLS | Certificat vérifié avec l'autorité indiquée, connexion d'un agent d'accueil, menu réduit à ses 6 modules |
+| Parcours complet au clavier simulé (identifiant, mot de passe, code MFA) | Tableau de bord alimenté, carte à 23 provinces, liste des plaintes paginée |
+| Désinstallation silencieuse | Programme et raccourcis supprimés ; `client.ini` conservé comme prévu |
+
+Deux fonctions de Windows absentes de Wine 9 ont dû être simulées **uniquement sur le banc d'essai** (jamais dans la livraison) : la bibliothèque ICU du système (`icuuc.dll`, redirigée vers ICU 78) et quatre fonctions de profils de couleur (`mscms.dll`). Ces composants sont présents nativement sur Windows 10 (version 1703 et suivantes) et Windows 11.
+
+Défauts trouvés et corrigés grâce à ce banc : extensions Qt non garanties dans l'exécutable (désormais collectées explicitement), barres d'actions tronquées à la taille minimale de fenêtre (réorganisées, test automatique ajouté), étiquettes de mois superposées sur le graphique, absence du bandeau d'environnement de démonstration, message d'erreur de proxy peu explicite.

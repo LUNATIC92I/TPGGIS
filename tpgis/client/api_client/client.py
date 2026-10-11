@@ -123,6 +123,12 @@ class ClientAPI:
                 "contactez l'administration technique.",
                 code="SERVEUR_INJOIGNABLE",
             ) from exc
+        except httpx.ProxyError as exc:
+            raise ErreurReseau(
+                "Le serveur TPGIS est injoignable à travers le proxy réseau du poste. Vérifiez l'adresse du serveur "
+                "et la configuration du proxy, ou contactez l'administration technique.",
+                code="SERVEUR_INJOIGNABLE",
+            ) from exc
         except httpx.TimeoutException as exc:
             raise ErreurReseau(
                 "Le serveur n'a pas répondu dans le délai imparti. Réessayez plus tard.", code="DELAI_DEPASSE"

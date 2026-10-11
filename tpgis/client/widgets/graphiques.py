@@ -42,12 +42,15 @@ class GraphiqueColonnes(QWidget):
             p.setPen(GRIS_TEXTE)
             p.drawText(QRectF(0, y - 7, 36, 14), Qt.AlignRight | Qt.AlignVCenter, f"{maximum * i / 4:.0f}")
         largeur = zone.width() / len(self.donnees)
+        # Une etiquette sur n, pour qu'elles ne se chevauchent jamais.
+        largeur_texte = max(p.fontMetrics().horizontalAdvance(e) for e, _ in self.donnees) + 6
+        pas_etiquettes = max(1, -(-int(largeur_texte) // max(1, int(largeur))))
         for i, (etiquette, valeur) in enumerate(self.donnees):
             h = zone.height() * valeur / maximum
             barre = QRectF(zone.left() + i * largeur + largeur * 0.15, zone.bottom() - h, largeur * 0.7, h)
             p.fillRect(barre, BLEU)
             p.setPen(GRIS_TEXTE)
-            if len(self.donnees) <= 13 or i % 2 == 0:
+            if i % pas_etiquettes == 0:
                 p.drawText(
                     QRectF(barre.left() - 12, zone.bottom() + 4, barre.width() + 24, 14), Qt.AlignCenter, etiquette
                 )

@@ -17,7 +17,18 @@ import math
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, Qt, QUrl, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QPixmap, QPolygonF, QTransform
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QFont,
+    QFontMetricsF,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QPixmap,
+    QPolygonF,
+    QTransform,
+)
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -29,16 +40,20 @@ from PySide6.QtWidgets import (
     QLabel,
 )
 
+from tpgis.client.theme import notificateur, theme_courant
+from tpgis.client.theme.jetons import POLICE_CARTE
 from tpgis.shared.geographie import charger
 
 ZOOM_BASE = 6
 TAILLE_TUILE = 256
 MONDE = TAILLE_TUILE * 2**ZOOM_BASE
 
-PALETTE_SEQUENTIELLE = ["#EEF3F8", "#C9DBEC", "#9DBEDD", "#6A9BC8", "#3D73A8", "#1F4E7E"]
-COULEUR_SANS_DONNEE = "#E4E6EA"
-COULEUR_BAISSE, COULEUR_STABLE, COULEUR_HAUSSE = "#6A9BC8", "#F1F1EF", "#B08D57"
-COULEUR_POLICE, COULEUR_GENDARMERIE = "#1F4E7E", "#3A3F47"
+NIVEAUX = 6  # classes de la palette sequentielle (voir jetons carte_sequentielle)
+
+
+def couleur(jeton: str) -> str:
+    """Couleur cartographique du theme actif."""
+    return theme_courant()[jeton]
 
 
 def projeter(lon: float, lat: float) -> QPointF:
@@ -86,19 +101,19 @@ class Province(QGraphicsPathItem):
     def __init__(self, code: str, nom: str, chemin: QPainterPath):
         super().__init__(chemin)
         self.code, self.nom = code, nom
-        self.setPen(_stylo("#FFFFFF", 0.8))
-        self.setBrush(QBrush(QColor(COULEUR_SANS_DONNEE)))
+        self.setPen(_stylo(couleur("carte_limite_province"), 0.8))
+        self.setBrush(QBrush(QColor(couleur("carte_sans_donnee"))))
         self.setAcceptHoverEvents(True)
         self.setToolTip(nom)
         self.setZValue(1)
 
     def hoverEnterEvent(self, event):  # noqa: N802
-        self.setPen(_stylo("#5DA9E9", 2.0))
+        self.setPen(_stylo(couleur("carte_survol"), 2.4))
         self.setZValue(2)
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):  # noqa: N802
-        self.setPen(_stylo("#FFFFFF", 0.8))
+        self.setPen(_stylo(couleur("carte_limite_province"), 0.8))
         self.setZValue(1)
         super().hoverLeaveEvent(event)
 
@@ -110,22 +125,46 @@ class Marqueur(QGraphicsPathItem):
             # Decalage de quelques pixels pour ne pas masquer le commissariat voisin.
             chemin.addPolygon(QPolygonF([QPointF(7, -12), QPointF(13, -6), QPointF(7, 0), QPointF(1, -6)]))
             chemin.closeSubpath()
-            couleur = COULEUR_GENDARMERIE
         else:
             chemin.addRect(QRectF(-11.5, -10.5, 9, 9))
-            couleur = COULEUR_POLICE
         super().__init__(chemin)
         self.unite = unite
         self.setPos(projeter(unite["longitude"], unite["latitude"]))
         self.setFlag(QGraphicsItem.ItemIgnoresTransformations)
         dans = unite.get("dans_perimetre", True)
-        self.setBrush(QBrush(QColor(couleur if dans else "#FFFFFF")))
-        self.setPen(QPen(QColor(couleur), 1.6))
+        self.colorer()
         self.setZValue(6)
         self.setToolTip(
             f"{unite['nom']}\n{unite.get('ville') or ''}"
             f"{'' if dans else chr(10) + 'Hors de votre périmètre de consultation'}"
         )
+
+    def colorer(self) -> None:
+        jeton = "carte_gendarmerie" if self.unite["corps"] == "GENDARMERIE" else "carte_police"
+        teinte = couleur(jeton)
+        dans = self.unite.get("dans_perimetre", True)
+        self.setBrush(QBrush(QColor(teinte if dans else couleur("carte_fond"))))
+        self.setPen(QPen(QColor(teinte), 1.6))
+
+
+class EtiquetteHalo(QGraphicsSimpleTextItem):
+    """Texte cartographique entoure d'un halo de la couleur du fond, lisible sur toutes les teintes."""
+
+    def __init__(self, texte: str, police: QFont):
+        super().__init__(texte)
+        self.setFont(police)
+
+    def boundingRect(self):  # noqa: N802
+        return super().boundingRect().adjusted(-2, -2, 2, 2)
+
+    def paint(self, peintre, option, widget=None):
+        chemin = QPainterPath()
+        chemin.addText(QPointF(0, QFontMetricsF(self.font()).ascent()), self.font(), self.text())
+        peintre.setRenderHint(QPainter.Antialiasing)
+        halo = QPen(QColor(couleur("carte_halo")), 3.0)
+        halo.setJoinStyle(Qt.RoundJoin)
+        peintre.strokePath(chemin, halo)
+        peintre.fillPath(chemin, self.brush())
 
 
 class CoucheTuiles:
@@ -198,19 +237,28 @@ class CoucheTuiles:
 class CarteTchad(QGraphicsView):
     province_survolee = Signal(str)
 
-    def __init__(self, parent=None, url_tuiles: str | None = None, attribution_tuiles: str = ""):
+    def __init__(
+        self,
+        parent=None,
+        url_tuiles: str | None = None,
+        attribution_tuiles: str = "",
+        mention_fictive: bool = False,
+    ):
         super().__init__(parent)
         self.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing | QPainter.SmoothPixmapTransform)
         self.setDragMode(QGraphicsView.ScrollHandDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setBackgroundBrush(QColor("#F4F6F9"))
+        self.setBackgroundBrush(QColor(couleur("carte_fond")))
         self.setMinimumSize(320, 260)
         self.scene_carte = QGraphicsScene(self)
         self.setScene(self.scene_carte)
         self.provinces: dict[str, Province] = {}
-        self.etiquettes_provinces: list[QGraphicsSimpleTextItem] = []
+        self.etiquettes_provinces: list[EtiquetteHalo] = []
+        self.frontieres: list[QGraphicsPathItem] = []
+        self.points_villes: list[QGraphicsItem] = []
+        self.noms_villes: list[EtiquetteHalo] = []
         self.villes: list[QGraphicsItem] = []
         self.marqueurs: list[Marqueur] = []
         self.indicateur = "plaintes"
@@ -218,18 +266,21 @@ class CarteTchad(QGraphicsView):
         self._construire_fond()
         self.tuiles = CoucheTuiles(self.scene_carte, url_tuiles, attribution_tuiles) if url_tuiles else None
         self.legende = QLabel(self)
-        self.legende.setObjectName("panneau")
-        self.legende.setStyleSheet(
-            "background: rgba(255,255,255,0.92); border: 1px solid #DDE2EA; "
-            "border-radius: 4px; padding: 6px; font-size: 8pt;"
-        )
+        self.legende.setObjectName("legendeCarte")
         self.source = QLabel(
             "Limites : © contributeurs OpenStreetMap, geoBoundaries (ODbL). Villes : Natural Earth. "
             "Limites indicatives.",
             self,
         )
-        self.source.setStyleSheet("background: rgba(255,255,255,0.8); font-size: 7pt; color: #5A6472; padding: 2px;")
+        self.source.setObjectName("sourceCarte")
+        # Hors production, les chiffres representes sont signales comme fictifs sur la carte elle meme.
+        self.mention = None
+        if mention_fictive:
+            self.mention = QLabel("Chiffres fictifs", self)
+            self.mention.setObjectName("mentionFictive")
+            self.mention.setToolTip("Environnement hors production : les valeurs représentées sont fictives.")
         self._maj_legende([])
+        notificateur.theme_change.connect(self._theme_change)
 
     # Construction
 
@@ -239,9 +290,7 @@ class CarteTchad(QGraphicsView):
             province = Province(code, nom, _chemin_geometrie(f["geometry"]))
             self.scene_carte.addItem(province)
             self.provinces[code] = province
-            etiquette = QGraphicsSimpleTextItem(nom.split(" (")[0])
-            etiquette.setFont(QFont("Segoe UI", 7))
-            etiquette.setBrush(QBrush(QColor("#2B2F36")))
+            etiquette = EtiquetteHalo(nom.split(" (")[0], QFont(POLICE_CARTE, 7))
             etiquette.setFlag(QGraphicsItem.ItemIgnoresTransformations)
             centre = _centre_etiquette(f["geometry"])
             etiquette.setPos(centre)
@@ -252,12 +301,10 @@ class CarteTchad(QGraphicsView):
             self.etiquettes_provinces.append(etiquette)
         for f in charger("tchad_frontiere.geojson")["features"]:
             frontiere = QGraphicsPathItem(_chemin_geometrie(f["geometry"]))
-            stylo = QPen(QColor("#0B1F3A"), 2.2)
-            stylo.setCosmetic(True)
-            frontiere.setPen(stylo)
             frontiere.setBrush(Qt.NoBrush)
             frontiere.setZValue(3)
             self.scene_carte.addItem(frontiere)
+            self.frontieres.append(frontiere)
         for f in charger("tchad_villes.geojson")["features"]:
             x, y = f["geometry"]["coordinates"]
             p = projeter(x, y)
@@ -268,16 +315,17 @@ class CarteTchad(QGraphicsView):
                 -rayon,
                 2 * rayon,
                 2 * rayon,
-                QPen(QColor("#FFFFFF"), 1),
-                QBrush(QColor("#0B1F3A" if capitale else "#2B2F36")),
+                QPen(Qt.NoPen),
+                QBrush(),
             )
+            self.points_villes.append(point)
             point.setPos(p)
             point.setFlag(QGraphicsItem.ItemIgnoresTransformations)
             point.setZValue(5)
             point.setToolTip(f["properties"]["nom"])
-            texte = QGraphicsSimpleTextItem(f["properties"]["nom"])
-            texte.setFont(QFont("Segoe UI", 8, QFont.Bold if capitale else QFont.Normal))
-            texte.setBrush(QBrush(QColor("#0B1F3A")))
+            police = QFont(POLICE_CARTE, 8, QFont.Bold if capitale else QFont.Normal)
+            texte = EtiquetteHalo(f["properties"]["nom"], police)
+            self.noms_villes.append(texte)
             texte.setFlag(QGraphicsItem.ItemIgnoresTransformations)
             texte.setPos(p)
             texte.setTransform(QTransform.fromTranslate(6, 1))
@@ -286,6 +334,27 @@ class CarteTchad(QGraphicsView):
             self.villes += [point, texte]
         self.emprise = self.scene_carte.itemsBoundingRect().adjusted(-20, -20, 20, 20)
         self.scene_carte.setSceneRect(self.emprise.adjusted(-400, -400, 400, 400))
+        self._couleurs_fond()
+
+    def _couleurs_fond(self) -> None:
+        """Couleurs des elements fixes de la carte, selon le theme actif."""
+        self.setBackgroundBrush(QColor(couleur("carte_fond")))
+        for province in self.provinces.values():
+            province.setPen(_stylo(couleur("carte_limite_province"), 0.8))
+        for frontiere in self.frontieres:
+            frontiere.setPen(_stylo(couleur("carte_frontiere"), 2.2))
+        for etiquette in self.etiquettes_provinces + self.noms_villes:
+            etiquette.setBrush(QBrush(QColor(couleur("carte_libelle"))))
+            etiquette.update()
+        for point in self.points_villes:
+            point.setPen(QPen(QColor(couleur("carte_halo")), 1))
+            point.setBrush(QBrush(QColor(couleur("carte_ville"))))
+
+    def _theme_change(self, _theme) -> None:
+        self._couleurs_fond()
+        for m in self.marqueurs:
+            m.colorer()
+        self._colorer()
 
     # Donnees
 
@@ -343,21 +412,24 @@ class CarteTchad(QGraphicsView):
         maximum = max(valeurs)
         if maximum <= 0:
             return []
-        n = len(PALETTE_SEQUENTIELLE) - 1
+        n = NIVEAUX - 1
         bornes = sorted({max(1, round(maximum * (i + 1) / n)) for i in range(n)})
         return bornes
 
     def _couleur(self, valeur, bornes) -> str:
+        theme = theme_courant()
+        sequentielle = theme.carte_sequentielle
         if valeur is None or not bornes:
-            return COULEUR_SANS_DONNEE
+            return theme["carte_sans_donnee"]
         if self.indicateur == "tendance":
-            return COULEUR_BAISSE if valeur < bornes[0] else COULEUR_HAUSSE if valeur > bornes[1] else COULEUR_STABLE
+            baisse, stable, hausse = theme.carte_tendance
+            return baisse if valeur < bornes[0] else hausse if valeur > bornes[1] else stable
         if valeur == 0:
-            return PALETTE_SEQUENTIELLE[0]
+            return sequentielle[0]
         for i, borne in enumerate(bornes):
             if valeur <= borne:
-                return PALETTE_SEQUENTIELLE[i + 1]
-        return PALETTE_SEQUENTIELLE[-1]
+                return sequentielle[i + 1]
+        return sequentielle[-1]
 
     def _maj_legende(self, bornes: list) -> None:
         titres = {
@@ -365,28 +437,31 @@ class CarteTchad(QGraphicsView):
             "dossiers": "Dossiers en cours",
             "tendance": "Évolution par rapport à la période précédente",
         }
+        theme = theme_courant()
+        sequentielle = theme.carte_sequentielle
+        baisse, stable, hausse = theme.carte_tendance
         lignes = [f"<b>{titres[self.indicateur]}</b>"]
 
-        def case(couleur):
-            return f"<span style='background:{couleur};color:{couleur}'>&nbsp;&nbsp;&nbsp;&nbsp;</span>"
+        def case(teinte):
+            return f"<span style='background:{teinte};color:{teinte}'>&nbsp;&nbsp;&nbsp;&nbsp;</span>"
 
         if self.indicateur == "tendance" and bornes:
             lignes += [
-                f"{case(COULEUR_BAISSE)} baisse de plus de 10 %",
-                f"{case(COULEUR_STABLE)} stable",
-                f"{case(COULEUR_HAUSSE)} hausse de plus de 10 %",
+                f"{case(baisse)} baisse de plus de 10 %",
+                f"{case(stable)} stable",
+                f"{case(hausse)} hausse de plus de 10 %",
             ]
         elif bornes:
-            lignes.append(f"{case(PALETTE_SEQUENTIELLE[0])} 0")
+            lignes.append(f"{case(sequentielle[0])} 0")
             precedent = 0
-            for couleur, borne in zip(PALETTE_SEQUENTIELLE[1:], bornes, strict=False):
+            for teinte, borne in zip(sequentielle[1:], bornes, strict=False):
                 debut = precedent + 1
-                lignes.append(f"{case(couleur)} {debut}" + (f" à {borne}" if borne > debut else ""))
+                lignes.append(f"{case(teinte)} {debut}" + (f" à {borne}" if borne > debut else ""))
                 precedent = borne
-        lignes.append(f"{case(COULEUR_SANS_DONNEE)} aucune donnée")
+        lignes.append(f"{case(theme['carte_sans_donnee'])} aucune donnée")
         lignes.append(
-            f"<span style='color:{COULEUR_POLICE}'>&#9632;</span> Police  "
-            f"<span style='color:{COULEUR_GENDARMERIE}'>&#9670;</span> Gendarmerie"
+            f"<span style='color:{theme['carte_police']}'>&#9632;</span> Police  "
+            f"<span style='color:{theme['carte_gendarmerie']}'>&#9670;</span> Gendarmerie"
         )
         self.legende.setText("<br/>".join(lignes))
         self.legende.adjustSize()
@@ -438,3 +513,6 @@ class CarteTchad(QGraphicsView):
         self.legende.move(10, max(10, self.height() - self.legende.height() - 30))
         self.source.adjustSize()
         self.source.move(max(0, self.width() - self.source.width() - 6), self.height() - self.source.height() - 4)
+        if self.mention is not None:
+            self.mention.adjustSize()
+            self.mention.move(max(0, self.width() - self.mention.width() - 10), 10)

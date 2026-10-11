@@ -12,7 +12,7 @@ Ce guide s'adresse aux personnels habilités de la Police nationale et de la Gen
 
 ## 2. Écran principal
 
-Le bandeau supérieur rappelle votre identité, votre rôle et votre unité, et propose « Se déconnecter ». Le menu latéral donne accès aux modules :
+Le bandeau supérieur rappelle votre identité, votre rôle et votre unité, et propose « Affichage sombre » (ou « Affichage clair ») et « Se déconnecter ». L'affichage clair est utilisé par défaut ; l'affichage sombre convient aux postes utilisés dans une pièce peu éclairée. Votre choix est mémorisé sur le poste. Hors production, les écrans présentant des chiffres portent la mention « Chiffres fictifs » et la barre d'état rappelle l'environnement utilisé. Le menu latéral donne accès aux modules :
 
 | Module | Usage |
 |---|---|

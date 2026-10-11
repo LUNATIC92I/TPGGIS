@@ -15,3 +15,18 @@ delai_secondes = 30
 ;            fichier:C:/TPGIS/tuiles/{z}/{x}/{y}.png
 url_tuiles =
 attribution =
+
+[affichage]
+; Theme de l'interface : clair (par defaut) ou sombre. L'utilisateur peut
+; aussi basculer depuis le bandeau superieur ; son choix est memorise sur le poste.
+theme = clair
+
+[identite]
+; Nom et logo du logiciel affiches dans le bandeau, l'ecran de connexion et
+; le titre des fenetres. Laisser vide pour les valeurs par defaut.
+; N'indiquer un embleme ou un logo institutionnel qu'avec une autorisation
+; formelle de l'institution. Formats acceptes : SVG ou PNG carre.
+nom =
+nom_complet =
+sous_titre =
+logo =

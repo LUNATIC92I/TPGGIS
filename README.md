@@ -12,10 +12,10 @@ Plateforme institutionnelle de gestion des plaintes, des faits signalés, des pe
 |---|---|---|
 | Serveur applicatif (API sécurisée) | Python 3.12, FastAPI, SQLAlchemy 2, Pydantic 2 | `tpgis/server` |
 | Migrations de base de données | Alembic (PostgreSQL 16 en production, SQLite pour les tests) | `tpgis/server/database/migrations` |
-| Client de bureau Windows 10 et 11 | PySide6 (Qt 6), QSS, carte vectorielle native | `tpgis/client` |
+| Client de bureau Windows 10 et 11 | PySide6 (Qt 6), système de thèmes QSS (clair et sombre), carte vectorielle native | `tpgis/client` |
 | Éléments partagés (énumérations, permissions, schémas, données géographiques) | Python | `tpgis/shared` |
 | Données de démonstration synthétiques | Générateur reproductible | `tpgis/server/database/seed` |
-| Tests automatisés (121) | pytest | `tests` |
+| Tests automatisés (141) | pytest | `tests` |
 | Installateur Windows | PyInstaller et Inno Setup | `deployment/windows` |
 | Déploiement serveur | systemd, nginx (TLS), nftables, PostgreSQL | `deployment/server` |
 | Documentation | Markdown | `docs` |
@@ -41,7 +41,7 @@ TPGIS_TEST_DATABASE_URL=postgresql+psycopg://... python -m pytest (PostgreSQL, b
 TPGIS_TEST_CLAMD_SOCKET=/run/clamav/clamd.ctl python -m pytest    (avec un démon ClamAV réel)
 ```
 
-Résultat de la dernière exécution : 121 tests réussis sous Python 3.12.3 et 3.13 sur SQLite, et sur PostgreSQL 16.15. Le détail figure dans [docs/fonctionnalites_testees.md](docs/fonctionnalites_testees.md).
+Résultat de la dernière exécution (11 octobre 2026, Python 3.13, SQLite) : 140 tests réussis et 1 ignoré, le test du démon ClamAV réel n'étant exécuté que si `TPGIS_TEST_CLAMD_SOCKET` est fourni. Les campagnes précédentes sur PostgreSQL 16.15 et Python 3.12.3 portaient sur les 121 tests existant alors. Le détail figure dans [docs/fonctionnalites_testees.md](docs/fonctionnalites_testees.md).
 
 ## Documentation
 
@@ -54,6 +54,7 @@ Résultat de la dernière exécution : 121 tests réussis sous Python 3.12.3 et 
 | [docs/securite.md](docs/securite.md) | Sécurité, revue de sécurité, plan de réponse aux incidents |
 | [docs/sauvegarde_restauration.md](docs/sauvegarde_restauration.md) | Sauvegardes chiffrées, restauration, reprise après incident |
 | [docs/guide_utilisateur.md](docs/guide_utilisateur.md) | Guide utilisateur du client de bureau |
+| [docs/charte_graphique.md](docs/charte_graphique.md) | Charte graphique, thèmes clair et sombre, accessibilité, identité configurable |
 | [docs/performances.md](docs/performances.md) | Résultats mesurés sur volumes synthétiques |
 | [docs/fonctionnalites_testees.md](docs/fonctionnalites_testees.md) | Liste des fonctionnalités réellement testées |
 | [docs/integrations_a_valider.md](docs/integrations_a_valider.md) | Intégrations restant à valider |

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QPixmap
+from PySide6.QtCore import QSettings, QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -18,7 +18,9 @@ from PySide6.QtWidgets import (
 )
 
 from tpgis.client.api_client.client import ErreurAPI
-from tpgis.client.widgets.communs import chemin_ressource, icone
+from tpgis.client.theme import appliquer_theme, icone, identite, notificateur, theme_courant
+from tpgis.client.theme.bigarre import LisereBigarre
+from tpgis.client.theme.jetons import DIMENSIONS
 from tpgis.client.windows.administration import PageAudit, PageParametres, PageUnites, PageUtilisateurs
 from tpgis.client.windows.analyse import PageCartographie, PageRapports, PageTableauDeBord
 from tpgis.client.windows.base import SessionClient
@@ -52,19 +54,21 @@ class FenetrePrincipale(QMainWindow):
         super().__init__()
         self.session = session
         self.config = config
-        self.setWindowTitle("TPGIS : Tchad Police & Gendarmerie Information System")
+        self.setWindowTitle(identite().titre_fenetre)
         self.setMinimumSize(1100, 680)
         central = QWidget()
         couche = QVBoxLayout(central)
         couche.setContentsMargins(0, 0, 0, 0)
         couche.setSpacing(0)
         couche.addWidget(self._bandeau())
+        couche.addWidget(LisereBigarre(DIMENSIONS["hauteur_lisere"]))
         corps = QHBoxLayout()
         corps.setSpacing(0)
         self.navigation = QListWidget()
         self.navigation.setObjectName("navigation")
-        self.navigation.setFixedWidth(272)
-        self.navigation.setIconSize(QSize(18, 18))
+        self.navigation.setFixedWidth(DIMENSIONS["largeur_navigation"])
+        cote = DIMENSIONS["icone_navigation"]
+        self.navigation.setIconSize(QSize(cote, cote))
         self.navigation.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.pages = QStackedWidget()
         corps.addWidget(self.navigation)
@@ -80,6 +84,11 @@ class FenetrePrincipale(QMainWindow):
         self.minuterie.timeout.connect(self._verifier_session)
         self.minuterie.start(60_000)
         self.statusBar().showMessage(f"Connecté au serveur {session.api.url}  |  Toutes les actions sont journalisées.")
+        if session.donnees_fictives:
+            mention = QLabel(f"Environnement {session.environnement.upper()} : données et chiffres fictifs")
+            mention.setObjectName("mentionFictive")
+            self.statusBar().addPermanentWidget(mention)
+        notificateur.theme_change.connect(self._theme_change)
 
     def _bandeau(self) -> QWidget:
         bandeau = QWidget()
@@ -87,17 +96,15 @@ class FenetrePrincipale(QMainWindow):
         h = QHBoxLayout(bandeau)
         h.setContentsMargins(16, 6, 16, 6)
         logo = QLabel()
-        logo.setPixmap(
-            QPixmap(str(chemin_ressource("icons/embleme.svg"))).scaled(
-                34, 34, Qt.KeepAspectRatio, Qt.SmoothTransformation
-            )
-        )
+        logo.setPixmap(identite().pixmap_logo(38))
+        logo.setAccessibleName(f"Logo {identite().nom}")
         h.addWidget(logo)
+        h.addSpacing(6)
         titres = QVBoxLayout()
         titres.setSpacing(0)
-        t = QLabel("TPGIS")
+        t = QLabel(identite().nom)
         t.setObjectName("titreApplication")
-        s = QLabel("Police nationale et Gendarmerie nationale du Tchad")
+        s = QLabel(identite().sous_titre)
         s.setObjectName("sousTitreApplication")
         titres.addWidget(t)
         titres.addWidget(s)
@@ -107,10 +114,32 @@ class FenetrePrincipale(QMainWindow):
         info = QLabel(f"{m.get('grade') or ''} {m['prenoms']} {m['nom']}  |  {m['role']}  |  {m['unite_nom']}")
         info.setObjectName("infoUtilisateur")
         h.addWidget(info)
-        bouton = QPushButton("Se déconnecter")
-        bouton.clicked.connect(self.deconnecter)
-        h.addWidget(bouton)
+        self.bouton_theme = QPushButton()
+        self.bouton_theme.clicked.connect(self.basculer_theme)
+        h.addWidget(self.bouton_theme)
+        self.bouton_deconnexion = QPushButton("Se déconnecter")
+        self.bouton_deconnexion.clicked.connect(self.deconnecter)
+        h.addWidget(self.bouton_deconnexion)
+        self._icones_bandeau()
         return bandeau
+
+    def _icones_bandeau(self) -> None:
+        sombre = theme_courant().sombre
+        self.bouton_theme.setText("Affichage clair" if sombre else "Affichage sombre")
+        self.bouton_theme.setToolTip("Basculer entre l'affichage clair (par défaut) et l'affichage sombre")
+        self.bouton_theme.setIcon(icone("theme_clair" if sombre else "theme_sombre", "bandeau_texte", 16))
+        self.bouton_deconnexion.setIcon(icone("deconnexion", "bandeau_texte", 16))
+
+    def basculer_theme(self) -> None:
+        nom = "clair" if theme_courant().sombre else "sombre"
+        appliquer_theme(QApplication.instance(), nom)
+        QSettings("TPGIS", "client").setValue("affichage/theme", nom)
+
+    def _theme_change(self, _theme) -> None:
+        self._icones_bandeau()
+        for i in range(self.navigation.count()):
+            item = self.navigation.item(i)
+            item.setIcon(icone(item.data(Qt.UserRole)))
 
     def _construire_modules(self) -> None:
         options = {}
@@ -122,6 +151,7 @@ class FenetrePrincipale(QMainWindow):
             page = classe(self.session, **(options if classe is PageCartographie else {}))
             self.pages.addWidget(page)
             item = QListWidgetItem(icone(nom_icone), libelle)
+            item.setData(Qt.UserRole, nom_icone)
             self.navigation.addItem(item)
 
     def _verifier_session(self) -> None:

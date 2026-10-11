@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -13,10 +12,12 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from tpgis.client.api_client.client import ClientAPI, ErreurAPI, ErreurReseau
-from tpgis.client.widgets.communs import chemin_ressource
+from tpgis.client.theme import identite
+from tpgis.client.theme.bigarre import PanneauBigarre
 
 
 def _champ_secret(placeholder: str = "") -> QLineEdit:
@@ -27,37 +28,63 @@ def _champ_secret(placeholder: str = "") -> QLineEdit:
 
 
 class DialogueConnexion(QDialog):
+    """Ecran de connexion : panneau decoratif bigarre a gauche, formulaire sur fond uni a droite."""
+
     def __init__(self, api: ClientAPI, environnement: str = "", parent=None):
         super().__init__(parent)
         self.api = api
         self.resultat: dict | None = None
-        self.setWindowTitle("TPGIS : connexion sécurisée")
-        self.setMinimumWidth(430)
-        couche = QVBoxLayout(self)
-        couche.setContentsMargins(26, 22, 26, 20)
-        entete = QHBoxLayout()
+        ident = identite()
+        self.setWindowTitle(f"{ident.nom} : connexion sécurisée")
+        self.setMinimumSize(780, 460)
+        racine = QHBoxLayout(self)
+        racine.setContentsMargins(0, 0, 0, 0)
+        racine.setSpacing(0)
+
+        # Panneau decoratif : uniquement le logo et le nom du logiciel, sur la zone unie.
+        decor = PanneauBigarre()
+        decor.setFixedWidth(300)
+        d = QVBoxLayout(decor)
+        d.setContentsMargins(28, 28, 28, 28)
+        d.addStretch(3)
         logo = QLabel()
-        logo.setPixmap(
-            QPixmap(str(chemin_ressource("icons/embleme_sombre.svg"))).scaled(
-                44, 44, Qt.KeepAspectRatio, Qt.SmoothTransformation
-            )
-        )
-        entete.addWidget(logo)
-        titres = QVBoxLayout()
-        titre = QLabel("TCHAD POLICE & GENDARMERIE\nINFORMATION SYSTEM")
-        titre.setObjectName("titrePage")
-        titres.addWidget(titre)
-        sous = QLabel("Accès réservé aux personnels habilités. Toute connexion est journalisée.")
-        sous.setObjectName("sousTitrePage")
+        logo.setPixmap(ident.pixmap_logo(64))
+        logo.setAccessibleName(f"Logo {ident.nom}")
+        d.addWidget(logo)
+        nom = QLabel(ident.nom)
+        nom.setObjectName("nomDecor")
+        complet = QLabel(ident.nom_complet)
+        complet.setObjectName("texteDecor")
+        complet.setWordWrap(True)
+        sous = QLabel(ident.sous_titre)
+        sous.setObjectName("texteDecorSecondaire")
         sous.setWordWrap(True)
-        titres.addWidget(sous)
-        entete.addLayout(titres, 1)
-        couche.addLayout(entete)
+        for w in (nom, complet, sous):
+            d.addWidget(w)
+        d.addStretch(1)
+        racine.addWidget(decor)
+
+        panneau = QWidget()
+        panneau.setObjectName("panneauConnexion")
+        panneau.setAttribute(Qt.WA_StyledBackground, True)
+        couche = QVBoxLayout(panneau)
+        couche.setContentsMargins(36, 32, 36, 26)
+        couche.setSpacing(10)
+        titre = QLabel("Connexion sécurisée")
+        titre.setObjectName("titreConnexion")
+        couche.addWidget(titre)
+        consigne = QLabel("Accès réservé aux personnels habilités. Toute connexion est journalisée.")
+        consigne.setObjectName("sousTitrePage")
+        consigne.setWordWrap(True)
+        couche.addWidget(consigne)
         if environnement and environnement != "production":
             bandeau = QLabel(f"Environnement : {environnement.upper()}. Données fictives uniquement.")
             bandeau.setObjectName("avertissement")
+            bandeau.setWordWrap(True)
             couche.addWidget(bandeau)
+        couche.addSpacing(6)
         formulaire = QFormLayout()
+        formulaire.setVerticalSpacing(10)
         self.identifiant = QLineEdit()
         self.identifiant.setPlaceholderText("identifiant")
         self.mot_de_passe = _champ_secret()
@@ -75,6 +102,7 @@ class DialogueConnexion(QDialog):
         self.message.setObjectName("messageErreur")
         self.message.setWordWrap(True)
         couche.addWidget(self.message)
+        couche.addStretch()
         self.serveur = QLabel(f"Serveur : {api.url}")
         self.serveur.setObjectName("sousTitrePage")
         couche.addWidget(self.serveur)
@@ -89,6 +117,7 @@ class DialogueConnexion(QDialog):
         boutons.addWidget(annuler)
         boutons.addWidget(self.valider)
         couche.addLayout(boutons)
+        racine.addWidget(panneau, 1)
 
     def connecter(self) -> None:
         self.message.setText("")

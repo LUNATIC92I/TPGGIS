@@ -5,6 +5,7 @@ Usage : QT_QPA_PLATFORM=offscreen python scripts/captures_interfaces.py
 """
 
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -12,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PySide6.QtCore import QEventLoop, QTimer  # noqa: E402
 from PySide6.QtWidgets import QApplication, QMessageBox, QTabWidget  # noqa: E402
 
-from tpgis.client.api_client.client import ClientAPI  # noqa: E402
+from tpgis.client.api_client.client import ClientAPI, ErreurAPI  # noqa: E402
 from tpgis.client.api_client.travail import Executeur  # noqa: E402
 from tpgis.client.main import appliquer_theme  # noqa: E402
 from tpgis.client.windows.base import SessionClient  # noqa: E402
@@ -35,12 +36,23 @@ def attendre(s=0.5):
 
 def session(ident):
     api = ClientAPI("https://127.0.0.1:8443", certificat_ca="var/tls/ac_demo.crt")
-    code = None
-    try:
-        code = code_totp_demo(ident)
-    except KeyError:
-        pass
-    api.connecter(ident, MOT_DE_PASSE_DEMO, code)
+    for _ in range(6):
+        code = None
+        try:
+            code = code_totp_demo(ident)
+        except KeyError:
+            pass
+        try:
+            api.connecter(ident, MOT_DE_PASSE_DEMO, code)
+            break
+        except ErreurAPI as exc:
+            if exc.statut == 429:  # limitation de debit des connexions
+                time.sleep(15)
+                continue
+            # Un code TOTP ne sert qu'une fois (anti rejeu) : attendre la periode suivante.
+            if code is None or "Code de vérification" not in exc.message:
+                raise
+            time.sleep(31 - time.time() % 30)
     return SessionClient(api=api, moi=api.get("/auth/moi"), executeur=Executeur())
 
 
@@ -169,3 +181,32 @@ pd.numero.setText(plainte["numero"])
 pd.ouvrir()
 capturer(pd, "23_pieces_d_une_plainte", (1300, 600))
 print("termine 2")
+
+# 5. Charte graphique : affichages clair et sombre
+from tpgis.client.windows.plaintes import FormulairePlainte  # noqa: E402
+from tpgis.client.windows.principale import FenetrePrincipale  # noqa: E402
+
+CHARTE = CIBLE.parent / "charte"
+CHARTE.mkdir(exist_ok=True)
+fenetre = FenetrePrincipale(sr)
+fenetre.resize(1440, 860)
+fenetre.show()
+for theme in ("clair", "sombre"):
+    appliquer_theme(app, theme)
+    d = DialogueConnexion(api, "demonstration")
+    d.resize(820, 480)
+    d.show()
+    attendre(0.6)
+    d.grab().save(str(CHARTE / f"connexion_{theme}.png"))
+    d.close()
+    for i, nom in ((0, "tableau_de_bord"), (1, "plaintes"), (8, "cartographie"), (9, "rapports")):
+        fenetre.navigation.setCurrentRow(i)
+        attendre(1.0)
+        fenetre.grab().save(str(CHARTE / f"{nom}_{theme}.png"))
+    formulaire = FormulairePlainte(so)
+    capturer(formulaire, f"../charte/formulaire_plainte_{theme}", (760, 860))
+    formulaire.close()
+    print("charte", theme)
+appliquer_theme(app, "clair")
+fenetre.close()
+print("termine 3")

@@ -26,20 +26,37 @@ from tpgis.server.services import audit, plaintes, statistiques
 from tpgis.server.services.auth import exiger_reauthentification_recente
 from tpgis.server.services.commun import lire_parametre, prochain_numero
 from tpgis.server.services.contexte import Contexte
+from tpgis.shared import charte
 from tpgis.shared.enums import LIBELLES_ROLE_PERSONNE, LIBELLES_STATUT_PLAINTE
 from tpgis.shared.permissions import Permission
 
-BLEU_NUIT = colors.HexColor("#0B1F3A")
-GRIS = colors.HexColor("#E6E9EF")
+# Charte graphique TPGIS (palette partagee avec le client de bureau).
+OLIVE = colors.HexColor(charte.VERT_OLIVE)
+ANTHRACITE = colors.HexColor(charte.ANTHRACITE)
+ENTETE_TABLEAU = colors.HexColor("#E9E4D4")
+BORDURE = colors.HexColor("#B9B29C")
+HAUTEUR_COUVERTURE = 3.2 * cm
 
 
 def _styles():
     base = getSampleStyleSheet()
     return {
         "entete": ParagraphStyle("entete", parent=base["Normal"], alignment=TA_CENTER, fontSize=9, leading=11),
-        "titre": ParagraphStyle("titre", parent=base["Title"], fontSize=15, textColor=BLEU_NUIT, spaceAfter=6),
-        "sous_titre": ParagraphStyle("st", parent=base["Heading3"], textColor=BLEU_NUIT, spaceBefore=8),
-        "normal": ParagraphStyle("n", parent=base["Normal"], fontSize=9.5, leading=12),
+        "titre": ParagraphStyle("titre", parent=base["Title"], fontSize=15, textColor=OLIVE, spaceAfter=6),
+        "sous_titre": ParagraphStyle("st", parent=base["Heading3"], textColor=OLIVE, spaceBefore=8),
+        "normal": ParagraphStyle("n", parent=base["Normal"], fontSize=9.5, leading=12, textColor=ANTHRACITE),
+        "fictif": ParagraphStyle(
+            "f",
+            parent=base["Normal"],
+            fontSize=9,
+            leading=12,
+            textColor=colors.HexColor("#5C4526"),
+            backColor=colors.HexColor("#EFE6CD"),
+            borderColor=colors.HexColor(charte.SABLE),
+            borderWidth=0.6,
+            borderPadding=4,
+            spaceAfter=6,
+        ),
         "petit": ParagraphStyle("p", parent=base["Normal"], fontSize=7.5, textColor=colors.grey),
     }
 
@@ -48,10 +65,63 @@ def _p(texte, style) -> Paragraph:
     return Paragraph(escape(str(texte if texte is not None else "")).replace("\n", "<br/>"), style)
 
 
-def _document(bd: SessionBD, titre: str, numero: str, ctx: Contexte, corps: list) -> bytes:
+def _couverture(canvas, largeur: float, hauteur: float) -> None:
+    """Bandeau de couverture au motif bigarre (premiere page des rapports uniquement).
+
+    Le motif reste en haut de page, hors de toute zone de texte ou de tableau.
+    """
+    canvas.saveState()
+    y0 = hauteur - HAUTEUR_COUVERTURE
+    canvas.setFillColor(OLIVE)
+    canvas.rect(0, y0, largeur, HAUTEUR_COUVERTURE, stroke=0, fill=1)
+    chemin = canvas.beginPath()
+    chemin.rect(0, y0, largeur, HAUTEUR_COUVERTURE)
+    canvas.clipPath(chemin, stroke=0, fill=0)
+    for forme in charte.motif_bigarre(largeur, HAUTEUR_COUVERTURE, graine=1960, taille=40):
+        segments = charte.contour_lisse(forme.points)
+        trace = canvas.beginPath()
+        x, y = segments[0][0]
+        trace.moveTo(x, hauteur - y)
+        for (cx, cy), (ax, ay) in segments[1:]:
+            # Courbe quadratique convertie en courbe de Bezier cubique.
+            trace.curveTo(
+                x + 2 / 3 * (cx - x),
+                hauteur - (y + 2 / 3 * (cy - y)),
+                ax + 2 / 3 * (cx - ax),
+                hauteur - (ay + 2 / 3 * (cy - ay)),
+                ax,
+                hauteur - ay,
+            )
+            x, y = ax, ay
+        trace.close()
+        # Couleur pre melangee au fond olive : motif discret sans transparence PDF.
+        canvas.setFillColor(colors.HexColor(charte.melanger(forme.couleur, charte.VERT_OLIVE, 0.42)))
+        canvas.drawPath(trace, stroke=0, fill=1)
+    canvas.restoreState()
+    canvas.saveState()
+    canvas.setFillColor(OLIVE)
+    canvas.rect(0, y0 - 0.12 * cm, largeur, 0.12 * cm, stroke=0, fill=1)
+    canvas.restoreState()
+
+
+def _document(
+    bd: SessionBD,
+    titre: str,
+    numero: str,
+    ctx: Contexte,
+    corps: list,
+    *,
+    couverture: bool = False,
+    fictif: bool = False,
+) -> bytes:
     s = _styles()
     tampon = io.BytesIO()
     pied = lire_parametre(bd, "institution.pied_page")
+
+    def _premiere_page(canvas, doc):
+        if couverture:
+            _couverture(canvas, *A4)
+        _pied_page(canvas, doc)
 
     def _pied_page(canvas, doc):
         canvas.saveState()
@@ -66,12 +136,21 @@ def _document(bd: SessionBD, titre: str, numero: str, ctx: Contexte, corps: list
         pagesize=A4,
         leftMargin=2 * cm,
         rightMargin=2 * cm,
-        topMargin=1.5 * cm,
+        topMargin=(1.5 * cm + HAUTEUR_COUVERTURE) if couverture else 1.5 * cm,
         bottomMargin=2 * cm,
         title=titre,
         author="TPGIS",
     )
     elements = [_p(ligne, s["entete"]) for ligne in lire_parametre(bd, "institution.entete")]
+    if fictif:
+        elements.insert(
+            0,
+            _p(
+                "DONNÉES FICTIVES : document produit dans un environnement hors production. "
+                "Tous les chiffres sont fictifs et sans valeur administrative.",
+                s["fictif"],
+            ),
+        )
     elements += [
         Spacer(1, 0.4 * cm),
         _p(titre, s["titre"]),
@@ -82,7 +161,7 @@ def _document(bd: SessionBD, titre: str, numero: str, ctx: Contexte, corps: list
         ),
         Spacer(1, 0.3 * cm),
     ]
-    doc.build(elements + corps, onFirstPage=_pied_page, onLaterPages=_pied_page)
+    doc.build(elements + corps, onFirstPage=_premiere_page, onLaterPages=_pied_page)
     return tampon.getvalue()
 
 
@@ -90,11 +169,11 @@ def _tableau(lignes: list[list], largeurs=None, entete=True) -> Table:
     s = _styles()
     donnees = [[_p(c, s["normal"]) for c in ligne] for ligne in lignes]
     t = Table(donnees, colWidths=largeurs, repeatRows=1 if entete else 0)
-    style = [("GRID", (0, 0), (-1, -1), 0.4, colors.grey), ("VALIGN", (0, 0), (-1, -1), "TOP")]
+    style = [("GRID", (0, 0), (-1, -1), 0.4, BORDURE), ("VALIGN", (0, 0), (-1, -1), "TOP")]
     if entete:
-        style += [("BACKGROUND", (0, 0), (-1, 0), GRIS)]
+        style += [("BACKGROUND", (0, 0), (-1, 0), ENTETE_TABLEAU)]
     else:
-        style += [("BACKGROUND", (0, 0), (0, -1), GRIS)]
+        style += [("BACKGROUND", (0, 0), (0, -1), ENTETE_TABLEAU)]
     t.setStyle(TableStyle(style))
     return t
 
@@ -256,7 +335,9 @@ def rapport_statistique_pdf(
             [13 * cm, 4 * cm],
         ),
     ]
-    contenu = _document(bd, "RAPPORT STATISTIQUE D'ACTIVITÉ", numero, ctx, corps)
+    contenu = _document(
+        bd, "RAPPORT STATISTIQUE D'ACTIVITÉ", numero, ctx, corps, couverture=True, fictif=not p.est_production
+    )
     audit.enregistrer_ctx(
         bd,
         ctx,

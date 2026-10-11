@@ -6,6 +6,7 @@ Ce document distingue ce qui a été **exécuté et vérifié** de ce qui ne l'a
 
 | Campagne | Environnement | Résultat |
 |---|---|---|
+| Suite complète sur SQLite, après la charte graphique (11 octobre 2026) | Python 3.13.16, Linux | 140 tests réussis, 1 ignoré (démon ClamAV réel non fourni pour cette exécution) |
 | Suite complète sur SQLite | Python 3.13.16, Linux | 121 tests réussis (avec démon ClamAV réel) |
 | Suite complète sur PostgreSQL 16.15 | Python 3.13.16, Linux | 121 tests réussis |
 | Suite complète sur SQLite, dépendances verrouillées | Python 3.12.3, Linux | 121 tests réussis |
@@ -54,6 +55,14 @@ Commande : `QT_QPA_PLATFORM=offscreen python -m pytest` (ajouter `TPGIS_TEST_DAT
 | Interface : 13 modules chargés pour 5 rôles, sans erreur | `test_toutes_les_pages_se_chargent` |
 | Interface : carte alimentée (23 provinces dont Ennedi Est et Ennedi Ouest, unités), indicateurs | `test_tableau_de_bord_et_carte_alimentes` |
 | Interface : erreurs serveur affichées dans le formulaire | `test_formulaire_affiche_erreur_serveur` |
+| Charte graphique : palette de référence, jetons identiques dans les deux thèmes, feuille QSS entièrement résolue | `test_palette_de_reference_de_la_charte`, `test_les_deux_themes_definissent_les_memes_jetons`, `test_feuille_de_style_entierement_resolue` |
+| Charte graphique : contrastes WCAG 2.1 (4,5:1 pour le texte, 3:1 pour les composants) dans les affichages clair et sombre | `test_contrastes_wcag`, `test_contraste_calcule_selon_wcag` |
+| Charte graphique : aucune couleur codée en dur hors du système de thèmes, icônes cohérentes | `test_aucune_couleur_codee_en_dur_hors_du_systeme_de_themes`, `test_icones_vectorielles_coherentes` |
+| Charte graphique : bascule clair et sombre à chaud (palette, carte, bandeau), sans erreur après fermeture des fenêtres | `test_bascule_clair_sombre_a_chaud`, `test_changement_de_theme_sans_erreur_apres_destruction_des_composants`, `test_theme_inconnu_retombe_sur_le_theme_clair` |
+| Motif bigarré déterministe, limité à la palette, jamais derrière un formulaire | `test_motif_bigarre_discret_deterministe_et_dans_la_palette`, `test_motif_jamais_derriere_les_formulaires` |
+| Chiffres signalés fictifs hors production (interface et rapport PDF), absents en production | `test_chiffres_signales_fictifs_hors_production`, `test_rapport_pdf_couverture_et_mention_fictive` |
+| Nom et logo du logiciel configurables, logo par défaut sans emblème | `test_nom_et_logo_configurables`, `test_logo_par_defaut_sans_embleme_officiel` |
+| Carte du Tchad : empreintes des données, 23 codes ISO 3166-2:TD, emprise, localisation de N'Djamena et d'Abéché | `test_donnees_geographiques_verifiees` |
 
 ## 4. Vérifications manuelles réalisées
 
@@ -72,7 +81,8 @@ Commande : `QT_QPA_PLATFORM=offscreen python -m pytest` (ajouter `TPGIS_TEST_DAT
 3. **ClamAV avec les signatures officielles** : le démon réel a été testé avec une signature locale EICAR, le téléchargement des signatures officielles étant bloqué dans l'environnement de développement.
 4. **Le déploiement systemd, nginx et nftables** n'a pas été exécuté sur un serveur cible ; les fichiers sont fournis comme modèles.
 5. **La saisie au clavier et à la souris** de l'interface n'a pas été éprouvée par des utilisateurs ; les tests pilotent les composants par programme.
-6. **Les performances en réseau réel** (latence, TLS, plusieurs postes simultanés) restent à mesurer sur l'infrastructure cible.
+6. **La charte graphique dans l'exécutable Windows** : la nouvelle charte (thèmes clair et sombre, motif, logo) a été vérifiée par les tests et les captures sous Linux ; l'exécutable et l'installateur n'ont pas encore été reconstruits et réessayés sous Wine avec elle. Les captures `windows_*.png` montrent la charte précédente.
+7. **Les performances en réseau réel** (latence, TLS, plusieurs postes simultanés) restent à mesurer sur l'infrastructure cible.
 
 ## 6. Construction et exécution Windows sous Wine (11 octobre 2026)
 

@@ -24,6 +24,11 @@ class ConfigurationClient:
     autoriser_http_local: bool = False
     url_tuiles: str | None = None
     attribution_tuiles: str = ""
+    theme: str = "clair"
+    nom_logiciel: str | None = None
+    nom_complet: str | None = None
+    sous_titre: str | None = None
+    logo: str | None = None
 
 
 def _emplacements() -> list[Path]:
@@ -50,9 +55,18 @@ def charger_configuration() -> ConfigurationClient:
             if lecteur.has_section("carte"):
                 config.url_tuiles = lecteur["carte"].get("url_tuiles") or None
                 config.attribution_tuiles = lecteur["carte"].get("attribution", "")
+            if lecteur.has_section("affichage"):
+                config.theme = lecteur["affichage"].get("theme", config.theme).strip().lower()
+            if lecteur.has_section("identite"):
+                identite = lecteur["identite"]
+                config.nom_logiciel = identite.get("nom") or None
+                config.nom_complet = identite.get("nom_complet") or None
+                config.sous_titre = identite.get("sous_titre") or None
+                config.logo = identite.get("logo") or None
             break
     config.url_serveur = os.environ.get("TPGIS_CLIENT_URL", config.url_serveur)
     config.certificat_ca = os.environ.get("TPGIS_CLIENT_CA", config.certificat_ca)
     config.autoriser_http_local = os.environ.get("TPGIS_CLIENT_HTTP_LOCAL", "") == "1"
     config.url_tuiles = os.environ.get("TPGIS_CLIENT_TUILES", config.url_tuiles)
+    config.theme = os.environ.get("TPGIS_CLIENT_THEME", config.theme)
     return config

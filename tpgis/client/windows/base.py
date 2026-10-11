@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QWidget
 
 from tpgis.client.api_client.client import ClientAPI, ErreurAPI
 from tpgis.client.api_client.travail import Executeur
-from tpgis.client.widgets.communs import TitrePage, afficher_erreur, demander_finalite
+from tpgis.client.widgets.communs import MentionFictive, TitrePage, afficher_erreur, demander_finalite
 
 
 @dataclass
@@ -19,6 +19,7 @@ class SessionClient:
     moi: dict
     executeur: Executeur
     finalites: list[str] = field(default_factory=list)
+    environnement: str | None = None
     _categories: list[dict] | None = None
     _unites: list[dict] | None = None
 
@@ -38,6 +39,16 @@ class SessionClient:
         if self._unites is None:
             self._unites = self.api.get("/unites") if self.a("unite.lire") else []
         return self._unites
+
+    @property
+    def donnees_fictives(self) -> bool:
+        """Vrai hors production : les chiffres affiches sont alors signales comme fictifs."""
+        if self.environnement is None:
+            try:
+                self.environnement = str(self.api.verifier_disponibilite().get("environnement", ""))
+            except ErreurAPI:
+                self.environnement = ""
+        return bool(self.environnement) and self.environnement != "production"
 
     def invalider_caches(self) -> None:
         self._categories = self._unites = None
@@ -59,6 +70,8 @@ class Page(QWidget):
 
     titre = ""
     sous_titre = ""
+    # Pages presentant des chiffres agreges : signalees comme fictives hors production.
+    affiche_chiffres = False
 
     def __init__(self, session: SessionClient, parent=None):
         super().__init__(parent)
@@ -69,6 +82,8 @@ class Page(QWidget):
         self.couche.setSpacing(10)
         self.entete = QHBoxLayout()
         self.entete.addWidget(TitrePage(self.titre, self.sous_titre), 1)
+        if self.affiche_chiffres and session.donnees_fictives:
+            self.entete.addWidget(MentionFictive(), 0, Qt.AlignTop)
         self.couche.addLayout(self.entete)
         self._charge = False
 

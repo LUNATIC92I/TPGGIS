@@ -1,90 +1,195 @@
-/* Charte graphique TPGIS : bleu nuit, gris anthracite, blanc, touches de bleu clair. */
+/* Charte graphique TPGIS.
+   Modele de feuille de style : chaque jeton entre doubles accolades est remplace par la valeur du
+   theme actif (tpgis/client/theme/jetons.py). Aucune couleur n'est ecrite ici
+   en dur. Le motif bigarre n'est jamais utilise dans cette feuille : il est
+   dessine uniquement par les composants decoratifs dedies. */
 
 QWidget {
-    font-family: "Segoe UI", "Noto Sans", "DejaVu Sans", sans-serif;
-    font-size: 10pt;
-    color: #1E2329;
-    background-color: #F4F6F9;
+    font-family: {{police}};
+    font-size: {{police_normale}}pt;
+    color: {{texte}};
+    background-color: {{fond}};
 }
 
-QMainWindow, QDialog { background-color: #F4F6F9; }
+QMainWindow, QDialog { background-color: {{fond}}; }
+QLabel { background: transparent; }
 
 /* Bandeau superieur */
-#bandeau { background-color: #0B1F3A; min-height: 56px; }
-#bandeau QLabel { color: #FFFFFF; background: transparent; }
-#titreApplication { font-size: 13pt; font-weight: 600; letter-spacing: 1px; }
-#sousTitreApplication { color: #9FC3E8; font-size: 9pt; }
-#infoUtilisateur { color: #D6E8F7; font-size: 9pt; }
+#bandeau { background-color: {{bandeau_fond}}; min-height: {{hauteur_bandeau}}px; }
+#bandeau QLabel { color: {{bandeau_texte}}; background: transparent; }
+#titreApplication { font-size: {{police_titre_application}}pt; font-weight: 600; letter-spacing: 1px; }
+#sousTitreApplication { color: {{bandeau_texte_secondaire}}; font-size: {{police_petite}}pt; }
+#infoUtilisateur { color: {{bandeau_texte}}; font-size: {{police_petite}}pt; }
 #bandeau QPushButton {
-    background-color: transparent; color: #FFFFFF; border: 1px solid #3B5878;
-    border-radius: 4px; padding: 5px 12px;
+    background-color: transparent; color: {{bandeau_texte}}; border: 1px solid {{bandeau_bordure}};
+    border-radius: {{rayon_petit}}px; padding: 5px {{espace_m}}px;
 }
-#bandeau QPushButton:hover { background-color: #1A3557; }
+#bandeau QPushButton:hover { background-color: {{bandeau_survol}}; border-color: {{bandeau_texte_secondaire}}; }
+#bandeau QPushButton:focus { border-color: {{bandeau_texte_secondaire}}; }
 
 /* Navigation laterale */
 #navigation {
-    background-color: #2B2F36; border: none; color: #E6E9EF; outline: 0;
-    padding-top: 8px; font-size: 10pt;
+    background-color: {{navigation_fond}}; border: none; border-radius: 0px; color: {{navigation_texte}}; outline: 0;
+    padding-top: {{espace_s}}px; font-size: {{police_normale}}pt;
 }
-#navigation::item { padding: 10px 14px; border-left: 3px solid transparent; }
-#navigation::item:hover { background-color: #353A42; }
-#navigation::item:selected { background-color: #0B1F3A; border-left: 3px solid #5DA9E9; color: #FFFFFF; }
+#navigation::item {
+    padding: 10px {{espace_m}}px; border-left: 4px solid transparent; color: {{navigation_texte}};
+}
+#navigation::item:hover { background-color: {{navigation_survol}}; }
+#navigation::item:selected {
+    background-color: {{navigation_selection}}; border-left: 4px solid {{navigation_indicateur}};
+    color: {{navigation_texte}}; font-weight: 600;
+}
+#navigation:focus { outline: 0; }
 
 /* Titres de page */
-#titrePage { font-size: 15pt; font-weight: 600; color: #0B1F3A; background: transparent; }
-#sousTitrePage { color: #5A6472; background: transparent; }
+#titrePage { font-size: {{police_titre_page}}pt; font-weight: 600; color: {{texte_titre}}; background: transparent; }
+#sousTitrePage { color: {{texte_secondaire}}; background: transparent; }
+#titreSection { font-size: {{police_titre_section}}pt; font-weight: 600; color: {{texte_titre}}; }
 
-/* Cartes et panneaux */
-#carteIndicateur, #panneau {
-    background-color: #FFFFFF; border: 1px solid #DDE2EA; border-radius: 6px;
+/* Mention des donnees fictives (environnements hors production) */
+#mentionFictive {
+    background-color: {{fictif_fond}}; color: {{fictif_texte}}; border: 1px solid {{avertissement_bordure}};
+    border-radius: {{rayon_petit}}px; padding: 3px {{espace_s}}px; font-size: {{police_petite}}pt; font-weight: 600;
 }
-#valeurIndicateur { font-size: 20pt; font-weight: 600; color: #0B1F3A; background: transparent; }
-#libelleIndicateur { color: #5A6472; font-size: 9pt; background: transparent; }
+
+/* Cartes et panneaux : coins legerement arrondis */
+#carteIndicateur, #panneau {
+    background-color: {{surface}}; border: 1px solid {{bordure}}; border-radius: {{rayon_moyen}}px;
+}
+#carteIndicateur { border-top: 3px solid {{accent}}; }
+#valeurIndicateur {
+    font-size: {{police_indicateur}}pt; font-weight: 600; color: {{texte_titre}}; background: transparent;
+}
+#libelleIndicateur { color: {{texte_secondaire}}; font-size: {{police_petite}}pt; background: transparent; }
+
+/* Ecran de connexion : le formulaire reste sur une surface unie */
+#panneauConnexion { background-color: {{surface}}; }
+#titreConnexion { font-size: {{police_titre_page}}pt; font-weight: 600; color: {{texte_titre}}; }
 
 /* Boutons */
 QPushButton {
-    background-color: #FFFFFF; color: #0B1F3A; border: 1px solid #B8C4D4;
-    border-radius: 4px; padding: 6px 14px; min-height: 18px;
+    background-color: {{surface}}; color: {{texte}}; border: 1px solid {{bordure_champ}};
+    border-radius: {{rayon_petit}}px; padding: 6px {{espace_l}}px; min-height: 18px;
 }
-QPushButton:hover { background-color: #EAF3FC; border-color: #5DA9E9; }
-QPushButton:pressed { background-color: #D6E8F7; }
-QPushButton:disabled { color: #9AA3AE; background-color: #F0F2F5; border-color: #DDE2EA; }
-QPushButton#boutonPrincipal { background-color: #0B1F3A; color: #FFFFFF; border-color: #0B1F3A; }
-QPushButton#boutonPrincipal:hover { background-color: #17375F; }
-QPushButton#boutonDanger { color: #8E1B1B; border-color: #D9A3A3; }
-QPushButton#boutonDanger:hover { background-color: #FBEDED; }
+QPushButton:hover { background-color: {{bouton_survol}}; }
+QPushButton:pressed { background-color: {{bouton_appui}}; }
+QPushButton:focus { border: 2px solid {{focus}}; padding: 5px 15px; }
+QPushButton:disabled { color: {{texte_desactive}}; background-color: {{surface_desactivee}}; border-color: {{bordure}}; }
+QPushButton#boutonPrincipal { background-color: {{accent}}; color: {{accent_texte}}; border-color: {{accent}}; font-weight: 600; }
+QPushButton#boutonPrincipal:hover { background-color: {{accent_survol}}; border-color: {{accent_survol}}; }
+QPushButton#boutonPrincipal:focus { border: 2px solid {{focus}}; }
+QPushButton#boutonPrincipal:disabled { background-color: {{surface_desactivee}}; color: {{texte_desactive}}; border-color: {{bordure}}; }
+QPushButton#boutonDanger { color: {{erreur}}; border-color: {{danger_bordure}}; }
+QPushButton#boutonDanger:hover { background-color: {{erreur_fond}}; }
 
-/* Champs */
+/* Champs de saisie */
 QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QDateEdit, QDateTimeEdit, QSpinBox {
-    background-color: #FFFFFF; border: 1px solid #C3CCD8; border-radius: 4px; padding: 4px 6px;
-    selection-background-color: #5DA9E9;
+    background-color: {{surface}}; color: {{texte}}; border: 1px solid {{bordure_champ}};
+    border-radius: {{rayon_petit}}px; padding: 4px 6px; min-height: {{hauteur_champ}}px;
+    selection-background-color: {{selection}}; selection-color: {{selection_texte}};
 }
-QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QDateEdit:focus {
-    border: 1px solid #5DA9E9;
+QTextEdit, QPlainTextEdit { min-height: 0px; }
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QDateEdit:focus,
+QDateTimeEdit:focus, QSpinBox:focus {
+    border: 2px solid {{focus}}; padding: 3px 5px;
 }
-QLineEdit[obligatoire="true"] { border-left: 3px solid #5DA9E9; }
+QLineEdit:disabled, QComboBox:disabled, QDateEdit:disabled, QSpinBox:disabled {
+    background-color: {{surface_desactivee}}; color: {{texte_desactive}}; border-color: {{bordure}};
+}
+QLineEdit:read-only { background-color: {{surface_alternee}}; }
+QLineEdit[obligatoire="true"] { border-left: 3px solid {{accent}}; }
+QComboBox::drop-down, QDateEdit::drop-down, QDateTimeEdit::drop-down {
+    subcontrol-origin: padding; subcontrol-position: center right; width: 22px;
+    border: none; background: transparent;
+}
+QComboBox::down-arrow, QDateEdit::down-arrow, QDateTimeEdit::down-arrow {
+    image: url({{fichier_fleche_bas}}); width: 12px; height: 12px;
+}
+QComboBox::down-arrow:disabled, QDateEdit::down-arrow:disabled { image: url({{fichier_fleche_bas_desactivee}}); }
+QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
+    subcontrol-origin: border; width: 20px; border: none; background: transparent;
+}
+QAbstractSpinBox::up-button { subcontrol-position: top right; }
+QAbstractSpinBox::down-button { subcontrol-position: bottom right; }
+QAbstractSpinBox::up-button:hover, QAbstractSpinBox::down-button:hover { background: {{bouton_survol}}; }
+QAbstractSpinBox::up-arrow { image: url({{fichier_fleche_haut}}); width: 10px; height: 10px; }
+QAbstractSpinBox::down-arrow { image: url({{fichier_fleche_bas}}); width: 10px; height: 10px; }
+QAbstractSpinBox::up-arrow:disabled, QAbstractSpinBox::up-arrow:off { image: url({{fichier_fleche_haut_desactivee}}); }
+QAbstractSpinBox::down-arrow:disabled, QAbstractSpinBox::down-arrow:off { image: url({{fichier_fleche_bas_desactivee}}); }
+QComboBox QAbstractItemView {
+    background-color: {{surface}}; color: {{texte}}; border: 1px solid {{bordure_champ}};
+    selection-background-color: {{selection}}; selection-color: {{selection_texte}};
+}
+QCheckBox, QRadioButton { background: transparent; spacing: 6px; }
+QCheckBox::indicator {
+    width: 15px; height: 15px; border: 1px solid {{bordure_champ}}; border-radius: 3px; background: {{surface}};
+}
+QCheckBox::indicator:hover { border-color: {{focus}}; }
+QCheckBox::indicator:checked { background: {{accent}}; border-color: {{accent}}; image: url({{fichier_coche}}); }
+QCheckBox::indicator:disabled { background: {{surface_desactivee}}; border-color: {{bordure}}; }
+QCheckBox:focus { outline: none; }
 
-/* Tableaux */
-QTableView {
-    background-color: #FFFFFF; alternate-background-color: #F7F9FC; border: 1px solid #DDE2EA;
-    gridline-color: #EDF0F4; selection-background-color: #D6E8F7; selection-color: #0B1F3A;
+/* Tableaux : clairs, sans motif decoratif */
+QTableView, QListView, QTreeView {
+    background-color: {{surface}}; alternate-background-color: {{surface_alternee}}; color: {{texte}};
+    border: 1px solid {{bordure}}; border-radius: {{rayon_petit}}px; gridline-color: {{bordure}};
+    selection-background-color: {{selection}}; selection-color: {{selection_texte}};
 }
+QTableView:focus { border: 1px solid {{focus}}; }
+QHeaderView { background-color: {{surface_entete}}; border: none; }
 QHeaderView::section {
-    background-color: #E6EBF2; color: #2B2F36; padding: 6px; border: none;
-    border-right: 1px solid #D3DAE4; font-weight: 600;
+    background-color: {{surface_entete}}; color: {{texte}}; padding: 6px {{espace_s}}px; border: none;
+    border-right: 1px solid {{bordure}}; border-bottom: 1px solid {{bordure}}; font-weight: 600;
 }
+QTableCornerButton::section { background-color: {{surface_entete}}; border: none; }
 
-QTabWidget::pane { border: 1px solid #DDE2EA; background: #FFFFFF; border-radius: 4px; }
-QTabBar::tab { background: #E6EBF2; padding: 7px 14px; border-top-left-radius: 4px; border-top-right-radius: 4px; }
-QTabBar::tab:selected { background: #FFFFFF; color: #0B1F3A; font-weight: 600; }
+/* Onglets */
+QTabWidget::pane { border: 1px solid {{bordure}}; background: {{surface}}; border-radius: {{rayon_petit}}px; top: -1px; }
+QTabBar::tab {
+    background: {{surface_entete}}; color: {{texte}}; padding: 7px {{espace_l}}px; margin-right: 2px;
+    border-top-left-radius: {{rayon_petit}}px; border-top-right-radius: {{rayon_petit}}px;
+}
+QTabBar::tab:hover { background: {{bouton_survol}}; }
+QTabBar::tab:selected { background: {{surface}}; color: {{texte_titre}}; font-weight: 600; border-bottom: 3px solid {{accent}}; }
 
-QGroupBox { border: 1px solid #DDE2EA; border-radius: 6px; margin-top: 14px; background: #FFFFFF; }
-QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: #0B1F3A; font-weight: 600; }
+QGroupBox {
+    border: 1px solid {{bordure}}; border-radius: {{rayon_moyen}}px; margin-top: 14px;
+    background: {{surface}}; padding-top: 6px;
+}
+QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; color: {{texte_titre}}; font-weight: 600; }
 
-QStatusBar { background: #E6EBF2; color: #2B2F36; }
-QToolTip { background-color: #0B1F3A; color: #FFFFFF; border: none; padding: 5px; }
+/* Barres de defilement discretes */
+QScrollBar:vertical { background: {{fond}}; width: 12px; margin: 0; }
+QScrollBar::handle:vertical { background: {{bordure_champ}}; border-radius: 5px; min-height: 28px; margin: 2px; }
+QScrollBar:horizontal { background: {{fond}}; height: 12px; margin: 0; }
+QScrollBar::handle:horizontal { background: {{bordure_champ}}; border-radius: 5px; min-width: 28px; margin: 2px; }
+QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
+QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
+
+QMenu { background-color: {{surface}}; color: {{texte}}; border: 1px solid {{bordure}}; }
+QMenu::item:selected { background-color: {{selection}}; color: {{selection_texte}}; }
+QCalendarWidget QWidget { alternate-background-color: {{surface_alternee}}; }
+
+QStatusBar { background: {{surface_entete}}; color: {{texte}}; }
+QStatusBar QLabel { color: {{texte}}; }
+QToolTip { background-color: {{info_bulle_fond}}; color: {{info_bulle_texte}}; border: none; padding: 5px; }
 
 #avertissement {
-    background-color: #FFF7E0; border: 1px solid #E8C96A; border-radius: 4px; padding: 6px; color: #5C4600;
+    background-color: {{avertissement_fond}}; border: 1px solid {{avertissement_bordure}};
+    border-radius: {{rayon_petit}}px; padding: 6px {{espace_s}}px; color: {{avertissement_texte}};
 }
-#messageErreur { color: #8E1B1B; background: transparent; }
+#messageErreur { color: {{erreur}}; background: transparent; }
+#messageSucces { color: {{succes}}; background: transparent; }
+
+/* Legende et sources de la carte */
+#legendeCarte {
+    background-color: {{surface}}; color: {{texte}}; border: 1px solid {{bordure}};
+    border-radius: {{rayon_petit}}px; padding: 6px; font-size: 8pt;
+}
+#sourceCarte { background-color: {{surface}}; color: {{texte_secondaire}}; font-size: 7pt; padding: 2px 4px; }
+
+/* Textes poses sur la zone unie du panneau decoratif de connexion */
+#nomDecor { color: {{navigation_texte}}; font-size: 24pt; font-weight: 700; letter-spacing: 2px; }
+#texteDecor { color: {{navigation_texte}}; font-size: {{police_titre_section}}pt; font-weight: 600; }
+#texteDecorSecondaire { color: {{navigation_indicateur}}; font-size: {{police_petite}}pt; }

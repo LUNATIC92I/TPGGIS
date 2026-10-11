@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable
 from datetime import date, datetime
-from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QAbstractTableModel, QDate, QModelIndex, Qt, Signal
-from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -32,18 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from tpgis.client.api_client.client import ErreurAPI
-
-
-def chemin_ressource(relatif: str) -> Path:
-    base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[3]))
-    candidat = base / "tpgis" / "client" / "resources" / relatif
-    if candidat.exists():
-        return candidat
-    return Path(__file__).resolve().parents[1] / "resources" / relatif
-
-
-def icone(nom: str, sombre: bool = False) -> QIcon:
-    return QIcon(str(chemin_ressource(f"icons/{nom}{'_sombre' if sombre else ''}.svg")))
+from tpgis.client.widgets.ressources import chemin_ressource  # noqa: F401  (reexport)
 
 
 def fmt_date(valeur: Any) -> str:
@@ -74,6 +60,20 @@ class TitrePage(QWidget):
             s.setObjectName("sousTitrePage")
             s.setWordWrap(True)
             couche.addWidget(s)
+
+
+class MentionFictive(QLabel):
+    """Pastille signalant des chiffres fictifs (environnements de test et de demonstration)."""
+
+    TEXTE = "Chiffres fictifs : données de démonstration"
+
+    def __init__(self, texte: str | None = None, parent: QWidget | None = None):
+        super().__init__(texte or self.TEXTE, parent)
+        self.setObjectName("mentionFictive")
+        self.setToolTip(
+            "Environnement hors production : toutes les données et tous les chiffres affichés sont fictifs "
+            "et générés pour la démonstration."
+        )
 
 
 Colonne = tuple[str, str, Callable[[Any, dict], str] | None]

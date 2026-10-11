@@ -6,10 +6,39 @@ from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
-BLEU, GRIS_TEXTE, GRILLE = QColor("#3D73A8"), QColor("#5A6472"), QColor("#E6EBF2")
+from tpgis.client.theme import notificateur, theme_courant
+from tpgis.client.theme.jetons import RAYONS
 
 
-class GraphiqueColonnes(QWidget):
+def _couleurs() -> tuple[QColor, QColor, QColor, QColor, QColor]:
+    """Serie, texte secondaire, grille, fond et titre, lus dans le theme actif."""
+    t = theme_courant()
+    return (
+        QColor(t["graphique_serie"]),
+        QColor(t["texte_secondaire"]),
+        QColor(t["graphique_grille"]),
+        QColor(t["surface"]),
+        QColor(t["texte_titre"]),
+    )
+
+
+class _Graphique(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Methode liee (et non lambda) : la connexion disparait avec le composant.
+        notificateur.theme_change.connect(self._theme_change)
+
+    def _theme_change(self, _theme) -> None:
+        self.update()
+
+    def _fond(self, p: QPainter, fond: QColor) -> None:
+        """Panneau a coins legerement arrondis, comme les cartes de l'interface."""
+        p.setPen(QPen(QColor(theme_courant()["bordure"]), 1))
+        p.setBrush(fond)
+        p.drawRoundedRect(QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5), RAYONS["moyen"], RAYONS["moyen"])
+
+
+class GraphiqueColonnes(_Graphique):
     """Colonnes verticales (evolution mensuelle)."""
 
     def __init__(self, titre: str, parent=None):
@@ -24,8 +53,9 @@ class GraphiqueColonnes(QWidget):
     def paintEvent(self, _):  # noqa: N802
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
-        p.fillRect(self.rect(), QColor("#FFFFFF"))
-        p.setPen(QColor("#0B1F3A"))
+        SERIE, GRIS_TEXTE, GRILLE, FOND, TITRE = _couleurs()  # noqa: N806
+        self._fond(p, FOND)
+        p.setPen(TITRE)
         p.setFont(QFont(self.font().family(), 10, QFont.DemiBold))
         p.drawText(QRectF(12, 6, self.width() - 24, 20), Qt.AlignLeft, self.titre)
         if not self.donnees:
@@ -48,7 +78,7 @@ class GraphiqueColonnes(QWidget):
         for i, (etiquette, valeur) in enumerate(self.donnees):
             h = zone.height() * valeur / maximum
             barre = QRectF(zone.left() + i * largeur + largeur * 0.15, zone.bottom() - h, largeur * 0.7, h)
-            p.fillRect(barre, BLEU)
+            p.fillRect(barre, SERIE)
             p.setPen(GRIS_TEXTE)
             if i % pas_etiquettes == 0:
                 p.drawText(
@@ -56,7 +86,7 @@ class GraphiqueColonnes(QWidget):
                 )
 
 
-class GraphiqueBarres(QWidget):
+class GraphiqueBarres(_Graphique):
     """Barres horizontales (repartition par categorie)."""
 
     def __init__(self, titre: str, parent=None, maximum_lignes: int = 8):
@@ -71,8 +101,9 @@ class GraphiqueBarres(QWidget):
     def paintEvent(self, _):  # noqa: N802
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
-        p.fillRect(self.rect(), QColor("#FFFFFF"))
-        p.setPen(QColor("#0B1F3A"))
+        SERIE, GRIS_TEXTE, GRILLE, FOND, TITRE = _couleurs()  # noqa: N806
+        self._fond(p, FOND)
+        p.setPen(TITRE)
         p.setFont(QFont(self.font().family(), 10, QFont.DemiBold))
         p.drawText(QRectF(12, 6, self.width() - 24, 20), Qt.AlignLeft, self.titre)
         if not self.donnees:
@@ -92,5 +123,5 @@ class GraphiqueBarres(QWidget):
                 p.fontMetrics().elidedText(etiquette, Qt.ElideRight, int(libelle_l - 12)),
             )
             largeur = (self.width() - libelle_l - 50) * valeur / maximum
-            p.fillRect(QRectF(libelle_l, y + hauteur * 0.2, largeur, hauteur * 0.6), BLEU)
+            p.fillRect(QRectF(libelle_l, y + hauteur * 0.2, largeur, hauteur * 0.6), SERIE)
             p.drawText(QRectF(libelle_l + largeur + 4, y, 46, hauteur), Qt.AlignLeft | Qt.AlignVCenter, f"{valeur:.0f}")

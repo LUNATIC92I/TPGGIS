@@ -8,10 +8,33 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tpgis.shared import charte  # noqa: E402
+
+OLIVE = colors.HexColor(charte.VERT_OLIVE)
+IVOIRE = colors.HexColor(charte.IVOIRE)
+
 RACINE = Path(__file__).resolve().parents[1] / "docs" / "captures"
 DOSSIER = RACINE / "interfaces"
 
 SECTIONS = [
+    (
+        "Charte graphique",
+        [
+            ("../charte/connexion_clair", "Écran de connexion, affichage clair (motif réservé au panneau décoratif)"),
+            ("../charte/connexion_sombre", "Écran de connexion, affichage sombre"),
+            ("../charte/tableau_de_bord_clair", "Tableau de bord, affichage clair (chiffres fictifs signalés)"),
+            ("../charte/tableau_de_bord_sombre", "Tableau de bord, affichage sombre"),
+            ("../charte/plaintes_clair", "Tableau des plaintes, affichage clair"),
+            ("../charte/plaintes_sombre", "Tableau des plaintes, affichage sombre"),
+            ("../charte/cartographie_clair", "Cartographie du Tchad, affichage clair"),
+            ("../charte/cartographie_sombre", "Cartographie du Tchad, affichage sombre"),
+            ("../charte/rapports_clair", "Rapports et statistiques, affichage clair"),
+            ("../charte/rapports_sombre", "Rapports et statistiques, affichage sombre"),
+            ("../charte/formulaire_plainte_clair", "Formulaire sur surface unie, affichage clair"),
+            ("../charte/formulaire_plainte_sombre", "Formulaire sur surface unie, affichage sombre"),
+        ],
+    ),
     (
         "Connexion sécurisée",
         [
@@ -69,8 +92,8 @@ SECTIONS = [
     (
         "Exécutable Windows (sous Wine)",
         [
-            ("../windows_connexion", "TPGIS.exe : connexion"),
-            ("../windows_tableau_de_bord", "TPGIS.exe : tableau de bord après MFA"),
+            ("../windows_connexion", "TPGIS.exe : connexion (charte précédente)"),
+            ("../windows_tableau_de_bord", "TPGIS.exe : tableau de bord après MFA (charte précédente)"),
             ("../windows_serveur_indisponible", "TPGIS.exe : serveur injoignable"),
         ],
     ),
@@ -98,9 +121,32 @@ def main(sortie: Path) -> None:
     largeur, hauteur = landscape(A4)
     c = canvas.Canvas(str(sortie), pagesize=(largeur, hauteur))
     c.setTitle("TPGIS : galerie des interfaces")
-    c.setFillColor(colors.HexColor("#0B1F3A"))
+    # Couverture : motif bigarre discret, titre sur une zone unie.
+    c.setFillColor(OLIVE)
     c.rect(0, 0, largeur, hauteur, fill=1, stroke=0)
-    c.setFillColor(colors.white)
+    c.saveState()
+    for forme in charte.motif_bigarre(largeur, hauteur, graine=1960, taille=70):
+        segments = charte.contour_lisse(forme.points)
+        trace = c.beginPath()
+        x, y = segments[0][0]
+        trace.moveTo(x, hauteur - y)
+        for (cx, cy), (ax, ay) in segments[1:]:
+            trace.curveTo(
+                x + 2 / 3 * (cx - x),
+                hauteur - (y + 2 / 3 * (cy - y)),
+                ax + 2 / 3 * (cx - ax),
+                hauteur - (ay + 2 / 3 * (cy - ay)),
+                ax,
+                hauteur - ay,
+            )
+            x, y = ax, ay
+        trace.close()
+        c.setFillColor(colors.HexColor(charte.melanger(forme.couleur, charte.VERT_OLIVE, 0.4)))
+        c.drawPath(trace, stroke=0, fill=1)
+    c.restoreState()
+    c.setFillColor(OLIVE)
+    c.rect(0, hauteur / 2 - 50, largeur, 120, fill=1, stroke=0)
+    c.setFillColor(IVOIRE)
     c.setFont("Helvetica-Bold", 28)
     c.drawCentredString(largeur / 2, hauteur / 2 + 30, "TPGIS : galerie des interfaces")
     c.setFont("Helvetica", 13)
@@ -115,9 +161,9 @@ def main(sortie: Path) -> None:
             if not chemin.exists():
                 continue
             n += 1
-            c.setFillColor(colors.HexColor("#0B1F3A"))
+            c.setFillColor(colors.HexColor(charte.ANTHRACITE))
             c.rect(0, hauteur - 46, largeur, 46, fill=1, stroke=0)
-            c.setFillColor(colors.white)
+            c.setFillColor(IVOIRE)
             c.setFont("Helvetica-Bold", 14)
             c.drawString(24, hauteur - 29, f"{section}  |  {titre or titre_auto(stem)}")
             c.setFont("Helvetica", 9)
@@ -127,7 +173,7 @@ def main(sortie: Path) -> None:
             echelle = min((largeur - 48) / iw, (hauteur - 80) / ih)
             w, h = iw * echelle, ih * echelle
             c.drawImage(image, (largeur - w) / 2, (hauteur - 56 - h) / 2 + 4, w, h)
-            c.setStrokeColor(colors.HexColor("#DDE2EA"))
+            c.setStrokeColor(colors.HexColor("#D8D2C0"))
             c.rect((largeur - w) / 2, (hauteur - 56 - h) / 2 + 4, w, h)
             c.showPage()
     c.save()

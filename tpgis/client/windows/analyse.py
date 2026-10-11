@@ -81,6 +81,7 @@ class Filtres(QWidget):
 
 
 class PageTableauDeBord(Page):
+    affiche_chiffres = True
     titre = "Tableau de bord"
     sous_titre = "Indicateurs agrégés de votre périmètre, calculés à partir des données enregistrées."
 
@@ -114,7 +115,7 @@ class PageTableauDeBord(Page):
             grille.addWidget(carte, 0, i)
         self.couche.addLayout(grille)
         corps = QHBoxLayout()
-        self.carte = CarteTchad() if session.a("carte.lire") else None
+        self.carte = CarteTchad(mention_fictive=session.donnees_fictives) if session.a("carte.lire") else None
         if self.carte:
             corps.addWidget(self.carte, 3)
         colonne = QVBoxLayout()
@@ -152,6 +153,7 @@ class PageTableauDeBord(Page):
 
 
 class PageCartographie(Page):
+    affiche_chiffres = True
     titre = "Cartographie du Tchad"
     sous_titre = (
         "Indicateurs agrégés par province et implantation des unités. Aucune donnée nominative "
@@ -175,7 +177,9 @@ class PageCartographie(Page):
         )
         options.addWidget(QLabel("Indicateur"))
         options.addWidget(self.indicateur)
-        self.carte = CarteTchad(url_tuiles=url_tuiles, attribution_tuiles=attribution)
+        self.carte = CarteTchad(
+            url_tuiles=url_tuiles, attribution_tuiles=attribution, mention_fictive=session.donnees_fictives
+        )
         for couche, libelle in (("unites", "Unités"), ("villes", "Villes"), ("etiquettes", "Noms des provinces")):
             case = QCheckBox(libelle)
             case.setChecked(True)
@@ -224,6 +228,7 @@ class PageCartographie(Page):
 
 
 class PageRapports(Page):
+    affiche_chiffres = True
     titre = "Rapports et statistiques"
     sous_titre = (
         "Statistiques agrégées. Les exports CSV et PDF sont réservés aux utilisateurs autorisés, "

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QFormLayout,
@@ -221,9 +222,12 @@ class PageFaits(Page):
         nouveau.setObjectName("boutonPrincipal")
         nouveau.setEnabled(session.a("fait.creer"))
         nouveau.clicked.connect(self.creer)
-        for w in (self.categorie, self.nature, self.etat, filtrer, nouveau):
-            barre.addWidget(w)
-        barre.addStretch()
+        for liste in (self.categorie, self.nature, self.etat):
+            liste.setMinimumContentsLength(8)
+            barre.addWidget(liste, 1)
+        barre.addWidget(filtrer)
+        # Action principale a droite du titre, comme sur les autres pages.
+        self.entete.addWidget(nouveau, 0, Qt.AlignTop)
         self.couche.addLayout(barre)
         self.tableau = TableauDonnees(COLONNES_FAITS)
         self.tableau.ligne_activee.connect(

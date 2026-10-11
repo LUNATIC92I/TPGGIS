@@ -168,7 +168,7 @@ class PageUtilisateurs(Page):
         barre.addWidget(bouton("Rechercher", lambda: self.charger(1)))
         barre.addWidget(bouton("Nouveau compte", self.creer, gerer, "boutonPrincipal"))
         c.addLayout(barre)
-        # Actions sur le compte selectionne, sur deux lignes pour rester lisibles
+        # Actions sur le compte selectionne, sur deux colonnes pour rester lisibles
         # a la largeur minimale de la fenetre.
         actions = QGridLayout()
         for indice, (libelle, rappel, nom_objet) in enumerate(
@@ -181,7 +181,7 @@ class PageUtilisateurs(Page):
                 ("Désactiver", self.desactiver, "boutonDanger"),
             )
         ):
-            actions.addWidget(bouton(libelle, rappel, gerer, nom_objet), indice // 3, indice % 3)
+            actions.addWidget(bouton(libelle, rappel, gerer, nom_objet), indice // 2, indice % 2)
         c.addLayout(actions)
         self.tableau = TableauDonnees(
             [

@@ -175,8 +175,14 @@ class TableauDonnees(QWidget):
 class Choix(QComboBox):
     """Liste deroulante de couples (libelle, valeur)."""
 
+    # Largeur minimale en caracteres : la liste peut retrecir pour tenir dans la fenetre
+    # (sinon elle exige la largeur de son plus long libelle et deborde aux petites tailles).
+    CARACTERES_MINIMUM = 12
+
     def __init__(self, options: dict | list, vide: str | None = None, parent=None):
         super().__init__(parent)
+        self.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.setMinimumContentsLength(self.CARACTERES_MINIMUM)
         self.remplir(options, vide)
 
     def remplir(self, options: dict | list, vide: str | None = None) -> None:
@@ -186,6 +192,9 @@ class Choix(QComboBox):
         elements = options.items() if isinstance(options, dict) else options
         for valeur, texte in elements:
             self.addItem(texte, valeur)
+            self.setItemData(self.count() - 1, texte, Qt.ToolTipRole)
+        # La liste deroulante affiche toujours les libelles en entier.
+        self.view().setMinimumWidth(self.view().sizeHintForColumn(0) + 24)
 
     def valeur(self):
         return self.currentData()

@@ -57,7 +57,9 @@ def test_serveur_injoignable():
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
-    api = ClientAPI(f"https://127.0.0.1:{port}", delai=2)
+    # Sous Windows, une connexion vers un port ferme n'echoue qu'apres environ 2 secondes
+    # (nouvelles tentatives du systeme apres le refus) : le delai doit etre superieur.
+    api = ClientAPI(f"https://127.0.0.1:{port}", delai=10)
     with pytest.raises(ErreurReseau) as exc:
         api.verifier_disponibilite()
     assert exc.value.code == "SERVEUR_INJOIGNABLE"
@@ -222,11 +224,33 @@ def test_aucun_bouton_tronque_a_la_taille_minimale(qapp, client, connexions, mes
             fenetre.navigation.setCurrentRow(i)
             qapp.processEvents()
             page = fenetre.pages.currentWidget()
+            # Independant de la police : la page ne doit pas exiger plus que la place disponible.
+            if page.minimumSizeHint().width() > page.width():
+                tronques.append(
+                    (identifiant, fenetre.navigation.item(i).text(), "page trop large",
+                     f"minimum {page.minimumSizeHint().width()} > {page.width()}")
+                )  # fmt: skip
             for bouton in page.findChildren(QPushButton):
                 if bouton.isVisible() and bouton.width() < bouton.minimumSizeHint().width() - 1:
-                    tronques.append((identifiant, fenetre.navigation.item(i).text(), bouton.text()))
+                    tronques.append(
+                        (
+                            identifiant,
+                            fenetre.navigation.item(i).text(),
+                            bouton.text(),
+                            f"bouton {bouton.width()} < {bouton.minimumSizeHint().width()}",
+                            f"page {page.width()} (minimum {page.minimumSizeHint().width()})",
+                            f"fenetre {fenetre.width()}",
+                        )
+                    )
         fenetre.close()
-    assert tronques == [], "\n".join(map(str, tronques))
+    from PySide6.QtGui import QFontInfo
+
+    police = QFontInfo(qapp.font())
+    contexte = (
+        f"police {police.family()} {police.pixelSize()} px, "
+        f"ecran {qapp.primaryScreen().logicalDotsPerInch()} dpi {qapp.primaryScreen().size().toTuple()}"
+    )
+    assert tronques == [], contexte + "\n" + "\n".join(map(str, tronques))
 
 
 def test_environnement_signale_hors_production(qapp, client, donnees):

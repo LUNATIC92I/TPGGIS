@@ -56,6 +56,8 @@ class Filtres(QWidget):
         self.du.setDate(QDate.currentDate().addDays(-periode_defaut_jours))
         self.unite = Choix({}, "Toutes les unités du périmètre")
         self.categorie = Choix({}, "Toutes les catégories")
+        for liste in (self.unite, self.categorie):
+            liste.setMinimumContentsLength(8)
         try:
             self.unite.remplir({u["id"]: u["nom"] for u in session.unites()}, "Toutes les unités du périmètre")
             self.categorie.remplir({c["id"]: c["libelle"] for c in session.categories()}, "Toutes les catégories")
@@ -176,7 +178,9 @@ class PageCartographie(Page):
             lambda: self.carte.definir_donnees(self.carte.donnees, self.indicateur.valeur())
         )
         options.addWidget(QLabel("Indicateur"))
-        options.addWidget(self.indicateur)
+        options.addWidget(self.indicateur, 1)
+        couches = QHBoxLayout()
+        couches.addWidget(QLabel("Afficher"))
         self.carte = CarteTchad(
             url_tuiles=url_tuiles, attribution_tuiles=attribution, mention_fictive=session.donnees_fictives
         )
@@ -184,13 +188,13 @@ class PageCartographie(Page):
             case = QCheckBox(libelle)
             case.setChecked(True)
             case.toggled.connect(lambda v, c=couche: self.carte.afficher_couche(c, v))
-            options.addWidget(case)
+            couches.addWidget(case)
         if url_tuiles:
             fond = QCheckBox("Fond de carte raster")
             fond.setChecked(True)
             fond.toggled.connect(lambda v: self.carte.afficher_couche("fond", v))
-            options.addWidget(fond)
-        options.addStretch()
+            couches.addWidget(fond)
+        couches.addStretch()
         for texte, action in (
             ("+", lambda: self.carte.zoomer(1.4)),
             ("-", lambda: self.carte.zoomer(0.7)),
@@ -200,6 +204,7 @@ class PageCartographie(Page):
             b.clicked.connect(action)
             options.addWidget(b)
         self.couche.addLayout(options)
+        self.couche.addLayout(couches)
         corps = QHBoxLayout()
         corps.addWidget(self.carte, 3)
         self.tableau = TableauDonnees(

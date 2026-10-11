@@ -37,6 +37,8 @@ class PageRecherche(Page):
         f = QFormLayout(boite)
         self.finalite = QComboBox()
         self.finalite.setEditable(True)
+        self.finalite.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.finalite.setMinimumContentsLength(16)
         self.numero_plainte, self.numero_dossier, self.numero_interne = QLineEdit(), QLineEdit(), QLineEdit()
         self.nom, self.prenoms, self.lieu, self.document = QLineEdit(), QLineEdit(), QLineEdit(), QLineEdit()
         self.naissance = ChampDate()

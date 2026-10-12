@@ -31,10 +31,11 @@ from tpgis.client.windows.base import Page
 from tpgis.client.windows.personnes import DialogueSelectionPersonne
 from tpgis.client.windows.plaintes import OngletPieces
 from tpgis.shared.geographie import provinces
+from tpgis.shared.i18n import tr
 
 COLONNES_FAITS = [
     ("reference", "Référence", None),
-    ("categorie", "Catégorie", None),
+    ("categorie", "Catégorie", lambda v, _: tr(v) if v else ""),
     ("date_declaree", "Date déclarée", lambda v, _: fmt_date(v)),
     ("nature_information", "Nature de l'information", lambda v, _: L.libelle(L.NATURE_INFORMATION, v)),
     ("etat_verification", "Vérification", lambda v, _: L.libelle(L.ETAT_VERIFICATION, v)),
@@ -56,10 +57,10 @@ COLONNES_DOSSIERS = [
 def _historique() -> TableauDonnees:
     return TableauDonnees(
         [
-            ("modifie_le", "Date", lambda v, _: fmt_date(v)),
-            ("modifie_par", "Par", None),
-            ("action", "Action", None),
-            ("changements", "Détails", lambda v, _: str(v or "")),
+            ("modifie_le", tr("Date"), lambda v, _: fmt_date(v)),
+            ("modifie_par", tr("Par"), None),
+            ("action", tr("Action"), None),
+            ("changements", tr("Détails"), lambda v, _: str(v or "")),
         ],
         pagine=False,
     )
@@ -67,22 +68,26 @@ def _historique() -> TableauDonnees:
 
 class FormulaireFait(FormulaireDialogue):
     def __init__(self, session, parent=None, existant: dict | None = None):
-        super().__init__("Modifier le fait" if existant else "Enregistrer un fait signalé", parent, 640)
+        super().__init__(tr("Modifier le fait") if existant else tr("Enregistrer un fait signalé"), parent, 640)
         self.session, self.existant = session, existant
-        self.categorie = self.ajouter("Catégorie", Choix({c["id"]: c["libelle"] for c in session.categories()}), True)
-        self.date = self.ajouter("Date déclarée", ChampDate())
-        self.lieu = self.ajouter("Lieu", QLineEdit())
-        self.province = self.ajouter("Province", Choix(provinces(), "Province de l'unité"))
-        self.description = self.ajouter("Description", QPlainTextEdit(), True)
+        self.categorie = self.ajouter(
+            tr("Catégorie"), Choix({c["id"]: c["libelle"] for c in session.categories()}), True
+        )
+        self.date = self.ajouter(tr("Date déclarée"), ChampDate())
+        self.lieu = self.ajouter(tr("Lieu"), QLineEdit())
+        self.province = self.ajouter(tr("Province"), Choix(provinces(), tr("Province de l'unité")))
+        self.description = self.ajouter(tr("Description"), QPlainTextEdit(), True)
         self.description.setMinimumHeight(100)
         if not existant:
-            self.source = self.ajouter("Source de l'information", Choix(L.SOURCE_INFORMATION))
-        self.nature = self.ajouter("Nature de l'information", Choix(L.NATURE_INFORMATION))
-        self.etat = self.ajouter("État de vérification", Choix(L.ETAT_VERIFICATION))
-        self.references = self.ajouter("Références des actes", QLineEdit())
+            self.source = self.ajouter(tr("Source de l'information"), Choix(L.SOURCE_INFORMATION))
+        self.nature = self.ajouter(tr("Nature de l'information"), Choix(L.NATURE_INFORMATION))
+        self.etat = self.ajouter(tr("État de vérification"), Choix(L.ETAT_VERIFICATION))
+        self.references = self.ajouter(tr("Références des actes"), QLineEdit())
         note = QLabel(
-            "Distinguer strictement faits rapportés, faits vérifiés, soupçons et décisions judiciaires. "
-            "Une décision judiciaire doit citer la référence de l'acte de la juridiction."
+            tr(
+                "Distinguer strictement faits rapportés, faits vérifiés, soupçons et décisions judiciaires. "
+                "Une décision judiciaire doit citer la référence de l'acte de la juridiction."
+            )
         )
         note.setWordWrap(True)
         note.setObjectName("sousTitrePage")
@@ -120,7 +125,7 @@ class DialogueFait(QDialog):
     def __init__(self, session, fait_id: str, parent=None):
         super().__init__(parent)
         self.session, self.ident = session, fait_id
-        self.setWindowTitle("Fait signalé")
+        self.setWindowTitle(tr("Fait signalé"))
         self.setMinimumSize(820, 520)
         couche = QVBoxLayout(self)
         self.titre = QLabel("")
@@ -129,13 +134,13 @@ class DialogueFait(QDialog):
         self.onglets = QTabWidget()
         couche.addWidget(self.onglets, 1)
         boutons = QHBoxLayout()
-        modifier = QPushButton("Modifier")
+        modifier = QPushButton(tr("Modifier"))
         modifier.setEnabled(session.a("fait.modifier"))
         modifier.clicked.connect(self.modifier)
-        associer = QPushButton("Associer une personne")
+        associer = QPushButton(tr("Associer une personne"))
         associer.setEnabled(session.a("fait.modifier") and session.a("personne.lire"))
         associer.clicked.connect(self.associer)
-        fermer = QPushButton("Fermer")
+        fermer = QPushButton(tr("Fermer"))
         fermer.clicked.connect(self.accept)
         boutons.addWidget(modifier)
         boutons.addWidget(associer)
@@ -151,40 +156,46 @@ class DialogueFait(QDialog):
             afficher_erreur(self, exc)
             return
         f = self.f
-        self.titre.setText(f"Fait {f['reference']}  |  {L.libelle(L.NATURE_INFORMATION, f['nature_information'])}")
+        self.titre.setText(
+            tr(
+                "Fait {reference}  |  {libelle}",
+                reference=f["reference"],
+                libelle=L.libelle(L.NATURE_INFORMATION, f["nature_information"]),
+            )
+        )
         self.onglets.clear()
         infos = QWidget()
         formulaire = QFormLayout(infos)
         for libelle, valeur in [
-            ("Catégorie", f["categorie"]),
-            ("Date déclarée", fmt_date(f.get("date_declaree"))),
-            ("Lieu", f.get("lieu")),
-            ("Province", provinces().get(f.get("province_code") or "", "")),
-            ("Source", L.libelle(L.SOURCE_INFORMATION, f["source_information"])),
-            ("Nature", L.libelle(L.NATURE_INFORMATION, f["nature_information"])),
-            ("Vérification", L.libelle(L.ETAT_VERIFICATION, f["etat_verification"])),
-            ("Description", f["description"]),
-            ("Références des actes", f.get("references_actes")),
-            ("Unité", f["unite_nom"]),
+            (tr("Catégorie"), tr(f["categorie"])),
+            (tr("Date déclarée"), fmt_date(f.get("date_declaree"))),
+            (tr("Lieu"), f.get("lieu")),
+            (tr("Province"), provinces().get(f.get("province_code") or "", "")),
+            (tr("Source"), L.libelle(L.SOURCE_INFORMATION, f["source_information"])),
+            (tr("Nature"), L.libelle(L.NATURE_INFORMATION, f["nature_information"])),
+            (tr("Vérification"), L.libelle(L.ETAT_VERIFICATION, f["etat_verification"])),
+            (tr("Description"), f["description"]),
+            (tr("Références des actes"), f.get("references_actes")),
+            (tr("Unité"), f["unite_nom"]),
         ]:
             champ = QLabel(valeur or "")
             champ.setWordWrap(True)
             formulaire.addRow(libelle, champ)
-        self.onglets.addTab(infos, "Informations")
+        self.onglets.addTab(infos, tr("Informations"))
         personnes = TableauDonnees(
             [
-                ("numero_interne", "N° interne", None),
-                ("nom", "Nom", None),
-                ("prenoms", "Prénoms", None),
-                ("role", "Rôle procédural", lambda v, _: L.libelle(L.ROLE_PERSONNE, v)),
+                ("numero_interne", tr("N° interne"), None),
+                ("nom", tr("Nom"), None),
+                ("prenoms", tr("Prénoms"), None),
+                ("role", tr("Rôle procédural"), lambda v, _: L.libelle(L.ROLE_PERSONNE, v)),
             ],
             pagine=False,
         )
         personnes.definir_lignes(f["personnes"])
-        self.onglets.addTab(personnes, "Personnes concernées")
+        self.onglets.addTab(personnes, tr("Personnes concernées"))
         historique = _historique()
         historique.definir_lignes(f["historique"])
-        self.onglets.addTab(historique, "Historique")
+        self.onglets.addTab(historique, tr("Historique"))
 
     def modifier(self) -> None:
         if FormulaireFait(self.session, self, self.f).exec() == QDialog.Accepted:
@@ -213,12 +224,12 @@ class PageFaits(Page):
     def __init__(self, session, parent=None):
         super().__init__(session, parent)
         barre = QHBoxLayout()
-        self.categorie = Choix({}, "Toutes les catégories")
-        self.nature = Choix(L.NATURE_INFORMATION, "Toutes natures")
-        self.etat = Choix(L.ETAT_VERIFICATION, "Tous états")
-        filtrer = QPushButton("Filtrer")
+        self.categorie = Choix({}, tr("Toutes les catégories"))
+        self.nature = Choix(L.NATURE_INFORMATION, tr("Toutes natures"))
+        self.etat = Choix(L.ETAT_VERIFICATION, tr("Tous états"))
+        filtrer = QPushButton(tr("Filtrer"))
         filtrer.clicked.connect(lambda: self.charger(1))
-        nouveau = QPushButton("Nouveau fait")
+        nouveau = QPushButton(tr("Nouveau fait"))
         nouveau.setObjectName("boutonPrincipal")
         nouveau.setEnabled(session.a("fait.creer"))
         nouveau.clicked.connect(self.creer)
@@ -240,7 +251,7 @@ class PageFaits(Page):
         if self.categorie.count() == 1:
             try:
                 self.categorie.remplir(
-                    {c["id"]: c["libelle"] for c in self.session.categories()}, "Toutes les catégories"
+                    {c["id"]: c["libelle"] for c in self.session.categories()}, tr("Toutes les catégories")
                 )
             except ErreurAPI:
                 pass
@@ -260,23 +271,23 @@ class PageFaits(Page):
 
 class FormulaireDossier(FormulaireDialogue):
     def __init__(self, session, parent=None, existant: dict | None = None):
-        super().__init__("Modifier le dossier" if existant else "Ouvrir un dossier", parent, 620)
+        super().__init__(tr("Modifier le dossier") if existant else tr("Ouvrir un dossier"), parent, 620)
         self.session, self.existant = session, existant
-        self.intitule = self.ajouter("Intitulé", QLineEdit(), True)
-        self.procedure = self.ajouter("Type de procédure", Choix(L.TYPE_PROCEDURE))
+        self.intitule = self.ajouter(tr("Intitulé"), QLineEdit(), True)
+        self.procedure = self.ajouter(tr("Type de procédure"), Choix(L.TYPE_PROCEDURE))
         agents = {}
         try:
             unite = existant["unite_id"] if existant else session.moi["unite_id"]
             agents = {a["id"]: a["nom_complet"] for a in session.api.get(f"/unites/{unite}/agents")}
         except ErreurAPI:
             pass
-        self.enqueteur = self.ajouter("Enquêteur désigné", Choix(agents, "Non désigné"))
-        self.juridiction = self.ajouter("Juridiction", QLineEdit())
-        self.observations = self.ajouter("Observations", QPlainTextEdit())
+        self.enqueteur = self.ajouter(tr("Enquêteur désigné"), Choix(agents, tr("Non désigné")))
+        self.juridiction = self.ajouter(tr("Juridiction"), QLineEdit())
+        self.observations = self.ajouter(tr("Observations"), QPlainTextEdit())
         self.observations.setMaximumHeight(80)
         if existant:
-            self.statut = self.ajouter("Statut", Choix(L.STATUT_DOSSIER))
-            self.motif = self.ajouter("Motif (clôture, archivage, réouverture)", QLineEdit())
+            self.statut = self.ajouter(tr("Statut"), Choix(L.STATUT_DOSSIER))
+            self.motif = self.ajouter(tr("Motif (clôture, archivage, réouverture)"), QLineEdit())
             self.intitule.setText(existant["intitule"])
             self.procedure.choisir(existant["type_procedure"])
             self.enqueteur.choisir(existant.get("enqueteur_id"))
@@ -284,8 +295,8 @@ class FormulaireDossier(FormulaireDialogue):
             self.observations.setPlainText(existant.get("observations") or "")
             self.statut.choisir(existant["statut"])
         else:
-            self.plaintes = self.ajouter("Plaintes à rattacher (numéros)", QLineEdit())
-            self.plaintes.setPlaceholderText("PL-...; séparés par des points-virgules")
+            self.plaintes = self.ajouter(tr("Plaintes à rattacher (numéros)"), QLineEdit())
+            self.plaintes.setPlaceholderText(tr("PL-...; séparés par des points-virgules"))
         self.action = self._enregistrer
 
     def _enregistrer(self):
@@ -309,7 +320,7 @@ class FormulaireDossier(FormulaireDialogue):
             trouvees = api.get("/plaintes", {"numero": numero, "taille": 2})["elements"]
             exactes = [p for p in trouvees if p["numero"] == numero.upper()]
             if not exactes:
-                raise ValueError(f"Plainte {numero} introuvable dans votre périmètre.")
+                raise ValueError(tr("Plainte {numero} introuvable dans votre périmètre.", numero=numero))
             ids.append(exactes[0]["id"])
         return api.post("/dossiers", {**donnees, "plaintes_ids": ids})
 
@@ -318,7 +329,7 @@ class DialogueDossier(QDialog):
     def __init__(self, session, dossier_id: str, parent=None):
         super().__init__(parent)
         self.session, self.ident, self.api = session, dossier_id, session.api
-        self.setWindowTitle("Dossier et procédure")
+        self.setWindowTitle(tr("Dossier et procédure"))
         self.setMinimumSize(920, 600)
         couche = QVBoxLayout(self)
         self.titre = QLabel("")
@@ -328,10 +339,10 @@ class DialogueDossier(QDialog):
         couche.addWidget(self.onglets, 1)
         boutons = QHBoxLayout()
         actions = [
-            ("Modifier", self.modifier, session.a("dossier.modifier")),
-            ("Ajouter un acte", self.ajouter_acte, session.a("dossier.modifier")),
-            ("Associer une personne", self.associer, session.a("dossier.modifier") and session.a("personne.lire")),
-            ("Rattacher une plainte", self.rattacher, session.a("dossier.modifier")),
+            (tr("Modifier"), self.modifier, session.a("dossier.modifier")),
+            (tr("Ajouter un acte"), self.ajouter_acte, session.a("dossier.modifier")),
+            (tr("Associer une personne"), self.associer, session.a("dossier.modifier") and session.a("personne.lire")),
+            (tr("Rattacher une plainte"), self.rattacher, session.a("dossier.modifier")),
         ]
         for texte, rappel, actif in actions:
             b = QPushButton(texte)
@@ -339,7 +350,7 @@ class DialogueDossier(QDialog):
             b.clicked.connect(rappel)
             boutons.addWidget(b)
         boutons.addStretch()
-        fermer = QPushButton("Fermer")
+        fermer = QPushButton(tr("Fermer"))
         fermer.clicked.connect(self.accept)
         boutons.addWidget(fermer)
         couche.addLayout(boutons)
@@ -352,84 +363,86 @@ class DialogueDossier(QDialog):
             afficher_erreur(self, exc)
             return
         d = self.d
-        self.titre.setText(f"Dossier {d['numero']}  |  {L.libelle(L.STATUT_DOSSIER, d['statut'])}")
+        self.titre.setText(
+            tr("Dossier {numero}  |  {libelle}", numero=d["numero"], libelle=L.libelle(L.STATUT_DOSSIER, d["statut"]))
+        )
         self.onglets.clear()
         infos = QWidget()
         formulaire = QFormLayout(infos)
         for libelle, valeur in [
-            ("Intitulé", d["intitule"]),
-            ("Procédure", L.libelle(L.TYPE_PROCEDURE, d["type_procedure"])),
-            ("Unité", d["unite_nom"]),
-            ("Enquêteur", d.get("enqueteur")),
-            ("Ouverture", fmt_date(d["date_ouverture"])),
-            ("Clôture", fmt_date(d.get("date_cloture"))),
-            ("Motif de clôture", d.get("motif_cloture")),
-            ("Juridiction", d.get("juridiction")),
-            ("Observations", d.get("observations")),
+            (tr("Intitulé"), d["intitule"]),
+            (tr("Procédure"), L.libelle(L.TYPE_PROCEDURE, d["type_procedure"])),
+            (tr("Unité"), d["unite_nom"]),
+            (tr("Enquêteur"), d.get("enqueteur")),
+            (tr("Ouverture"), fmt_date(d["date_ouverture"])),
+            (tr("Clôture"), fmt_date(d.get("date_cloture"))),
+            (tr("Motif de clôture"), d.get("motif_cloture")),
+            (tr("Juridiction"), d.get("juridiction")),
+            (tr("Observations"), d.get("observations")),
         ]:
             champ = QLabel(valeur or "")
             champ.setWordWrap(True)
             formulaire.addRow(libelle, champ)
-        self.onglets.addTab(infos, "Informations")
+        self.onglets.addTab(infos, tr("Informations"))
         actes = TableauDonnees(
             [
-                ("date_acte", "Date", lambda v, _: fmt_date(v)),
-                ("type_acte", "Type", lambda v, _: L.libelle(L.TYPE_ACTE, v)),
-                ("reference", "Référence", None),
-                ("resume", "Résumé", None),
+                ("date_acte", tr("Date"), lambda v, _: fmt_date(v)),
+                ("type_acte", tr("Type"), lambda v, _: L.libelle(L.TYPE_ACTE, v)),
+                ("reference", tr("Référence"), None),
+                ("resume", tr("Résumé"), None),
             ],
             pagine=False,
         )
         actes.definir_lignes(d["actes"])
-        self.onglets.addTab(actes, f"Actes de procédure ({len(d['actes'])})")
+        self.onglets.addTab(actes, tr("Actes de procédure ({len})", len=len(d["actes"])))
         plaintes = TableauDonnees(
             [
-                ("numero", "Plainte", None),
-                ("recue_le", "Reçue le", lambda v, _: fmt_date(v)),
-                ("statut", "Statut", lambda v, _: L.libelle(L.STATUT_PLAINTE, v)),
+                ("numero", tr("Plainte"), None),
+                ("recue_le", tr("Reçue le"), lambda v, _: fmt_date(v)),
+                ("statut", tr("Statut"), lambda v, _: L.libelle(L.STATUT_PLAINTE, v)),
             ],
             pagine=False,
         )
         plaintes.definir_lignes(d["plaintes"])
-        self.onglets.addTab(plaintes, "Plaintes rattachées")
+        self.onglets.addTab(plaintes, tr("Plaintes rattachées"))
         personnes = TableauDonnees(
             [
-                ("numero_interne", "N° interne", None),
-                ("nom", "Nom", None),
-                ("prenoms", "Prénoms", None),
-                ("role", "Rôle procédural", lambda v, _: L.libelle(L.ROLE_PERSONNE, v)),
+                ("numero_interne", tr("N° interne"), None),
+                ("nom", tr("Nom"), None),
+                ("prenoms", tr("Prénoms"), None),
+                ("role", tr("Rôle procédural"), lambda v, _: L.libelle(L.ROLE_PERSONNE, v)),
             ],
             pagine=False,
         )
         personnes.definir_lignes(d["personnes"])
-        self.onglets.addTab(personnes, "Personnes")
+        self.onglets.addTab(personnes, tr("Personnes"))
         faits = TableauDonnees(
             [
-                ("reference", "Fait", None),
-                ("categorie", "Catégorie", None),
-                ("nature_information", "Nature", lambda v, _: L.libelle(L.NATURE_INFORMATION, v)),
+                ("reference", tr("Fait"), None),
+                ("categorie", tr("Catégorie"), lambda v, _: tr(v) if v else ""),
+                ("nature_information", tr("Nature"), lambda v, _: L.libelle(L.NATURE_INFORMATION, v)),
             ],
             pagine=False,
         )
         faits.definir_lignes(d["faits"])
-        self.onglets.addTab(faits, "Faits")
+        self.onglets.addTab(faits, tr("Faits"))
         if self.session.a("document.lire"):
-            self.onglets.addTab(OngletPieces(self.session, "dossier_id", self.ident, self), "Pièces")
+            self.onglets.addTab(OngletPieces(self.session, "dossier_id", self.ident, self), tr("Pièces"))
         historique = _historique()
         historique.definir_lignes(d["historique"])
-        self.onglets.addTab(historique, "Historique")
+        self.onglets.addTab(historique, tr("Historique"))
 
     def modifier(self) -> None:
         if FormulaireDossier(self.session, self, self.d).exec() == QDialog.Accepted:
             self.recharger()
 
     def ajouter_acte(self) -> None:
-        formulaire = FormulaireDialogue("Ajouter un acte de procédure", self)
-        type_acte = formulaire.ajouter("Type d'acte", Choix(L.TYPE_ACTE))
-        reference = formulaire.ajouter("Référence", QLineEdit(), True)
-        date_acte = formulaire.ajouter("Date de l'acte", ChampDate())
+        formulaire = FormulaireDialogue(tr("Ajouter un acte de procédure"), self)
+        type_acte = formulaire.ajouter(tr("Type d'acte"), Choix(L.TYPE_ACTE))
+        reference = formulaire.ajouter(tr("Référence"), QLineEdit(), True)
+        date_acte = formulaire.ajouter(tr("Date de l'acte"), ChampDate())
         date_acte.connue.setChecked(True)
-        resume = formulaire.ajouter("Résumé", QPlainTextEdit())
+        resume = formulaire.ajouter(tr("Résumé"), QPlainTextEdit())
         formulaire.action = lambda: self.api.post(
             f"/dossiers/{self.ident}/actes",
             {
@@ -455,14 +468,14 @@ class DialogueDossier(QDialog):
             self.recharger()
 
     def rattacher(self) -> None:
-        formulaire = FormulaireDialogue("Rattacher une plainte", self)
-        numero = formulaire.ajouter("Numéro de plainte", QLineEdit(), True)
+        formulaire = FormulaireDialogue(tr("Rattacher une plainte"), self)
+        numero = formulaire.ajouter(tr("Numéro de plainte"), QLineEdit(), True)
 
         def _action():
             trouvees = self.api.get("/plaintes", {"numero": numero.text().strip(), "taille": 2})["elements"]
             exactes = [p for p in trouvees if p["numero"] == numero.text().strip().upper()]
             if not exactes:
-                raise ValueError("Plainte introuvable dans votre périmètre.")
+                raise ValueError(tr("Plainte introuvable dans votre périmètre."))
             return self.api.post(f"/dossiers/{self.ident}/plaintes", {"plainte_id": exactes[0]["id"]})
 
         formulaire.action = _action
@@ -478,12 +491,12 @@ class PageDossiers(Page):
         super().__init__(session, parent)
         barre = QHBoxLayout()
         self.numero = QLineEdit()
-        self.numero.setPlaceholderText("Numéro de dossier")
+        self.numero.setPlaceholderText(tr("Numéro de dossier"))
         self.numero.returnPressed.connect(lambda: self.charger(1))
-        self.statut = Choix(L.STATUT_DOSSIER, "Tous les statuts")
-        filtrer = QPushButton("Filtrer")
+        self.statut = Choix(L.STATUT_DOSSIER, tr("Tous les statuts"))
+        filtrer = QPushButton(tr("Filtrer"))
         filtrer.clicked.connect(lambda: self.charger(1))
-        nouveau = QPushButton("Ouvrir un dossier")
+        nouveau = QPushButton(tr("Ouvrir un dossier"))
         nouveau.setObjectName("boutonPrincipal")
         nouveau.setEnabled(session.a("dossier.creer"))
         nouveau.clicked.connect(self.creer)

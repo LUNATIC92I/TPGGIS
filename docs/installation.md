@@ -71,7 +71,7 @@ Le script crée un environnement isolé, construit l'exécutable avec PyInstalle
 ### 5.2 Déploiement sur les postes
 
 1. Exécuter l'installateur (droits administrateur), ou en silencieux : `TPGIS_Client_0.1.0_Installation.exe /VERYSILENT /SUPPRESSMSGBOXES`.
-2. L'installateur dépose `client.ini` dans le dossier du programme avec l'adresse du serveur. Les paramètres facultatifs sont : `certificat_ca` (si l'autorité de l'institution n'est pas déjà dans le magasin Windows), `delai_secondes`, la section `[carte]` pour un fond de carte raster validé, la section `[affichage]` (thème `clair` par défaut ou `sombre`) et la section `[identite]` (nom, sous titre et logo du logiciel, voir [charte_graphique.md](charte_graphique.md)).
+2. L'installateur dépose `client.ini` dans le dossier du programme avec l'adresse du serveur. Les paramètres facultatifs sont : `certificat_ca` (si l'autorité de l'institution n'est pas déjà dans le magasin Windows), `delai_secondes`, la section `[carte]` pour un fond de carte raster validé, la section `[affichage]` (thème `clair` par défaut ou `sombre`, langue `fr` par défaut ou `en`) et la section `[identite]` (nom, sous titre et logo du logiciel, voir [charte_graphique.md](charte_graphique.md)).
 3. Au lancement, le client vérifie la disponibilité du serveur et affiche un message clair s'il est injoignable ou si son certificat n'est pas reconnu. Il refuse toute adresse non chiffrée (`http://`).
 
 ## 6. Environnement de démonstration

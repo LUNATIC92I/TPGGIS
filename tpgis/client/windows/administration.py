@@ -38,6 +38,7 @@ from tpgis.client.widgets.communs import (
 from tpgis.client.windows.base import Page
 from tpgis.client.windows.connexion import DialogueChangementMotDePasse, avec_reauthentification
 from tpgis.shared.geographie import provinces
+from tpgis.shared.i18n import tr
 
 
 class PageUnites(Page):
@@ -47,11 +48,11 @@ class PageUnites(Page):
     def __init__(self, session, parent=None):
         super().__init__(session, parent)
         barre = QHBoxLayout()
-        nouvelle = QPushButton("Nouvelle unité")
+        nouvelle = QPushButton(tr("Nouvelle unité"))
         nouvelle.setObjectName("boutonPrincipal")
         nouvelle.setEnabled(session.a("unite.gerer"))
         nouvelle.clicked.connect(lambda: self.editer(None))
-        modifier = QPushButton("Modifier")
+        modifier = QPushButton(tr("Modifier"))
         modifier.setEnabled(session.a("unite.gerer"))
         modifier.clicked.connect(lambda: self.editer(self.tableau.selection()))
         barre.addStretch()
@@ -61,13 +62,13 @@ class PageUnites(Page):
         noms_provinces = provinces()
         self.tableau = TableauDonnees(
             [
-                ("code", "Code", None),
-                ("nom", "Nom", None),
-                ("corps", "Corps", lambda v, _: L.libelle(L.CORPS, v)),
-                ("type_unite", "Type", lambda v, _: L.libelle(L.TYPE_UNITE, v)),
-                ("province_code", "Province", lambda v, _: noms_provinces.get(v or "", v or "")),
-                ("ville", "Ville", None),
-                ("active", "Active", None),
+                ("code", tr("Code"), None),
+                ("nom", tr("Nom"), None),
+                ("corps", tr("Corps"), lambda v, _: L.libelle(L.CORPS, v)),
+                ("type_unite", tr("Type"), lambda v, _: L.libelle(L.TYPE_UNITE, v)),
+                ("province_code", tr("Province"), lambda v, _: noms_provinces.get(v or "", v or "")),
+                ("ville", tr("Ville"), None),
+                ("active", tr("Active"), None),
             ],
             pagine=False,
         )
@@ -79,24 +80,24 @@ class PageUnites(Page):
         self.executer(lambda: self.api.get("/unites"), self.tableau.definir_lignes)
 
     def editer(self, unite: dict | None) -> None:
-        f = FormulaireDialogue("Modifier l'unité" if unite else "Nouvelle unité", self)
-        code = f.ajouter("Code", QLineEdit(unite["code"] if unite else ""), True)
+        f = FormulaireDialogue(tr("Modifier l'unité") if unite else tr("Nouvelle unité"), self)
+        code = f.ajouter(tr("Code"), QLineEdit(unite["code"] if unite else ""), True)
         code.setEnabled(unite is None)
-        nom = f.ajouter("Nom", QLineEdit(unite["nom"] if unite else ""), True)
-        type_unite = f.ajouter("Type", Choix(L.TYPE_UNITE))
-        corps = f.ajouter("Corps", Choix(L.CORPS))
+        nom = f.ajouter(tr("Nom"), QLineEdit(unite["nom"] if unite else ""), True)
+        type_unite = f.ajouter(tr("Type"), Choix(L.TYPE_UNITE))
+        corps = f.ajouter(tr("Corps"), Choix(L.CORPS))
         parents = {u["id"]: u["nom"] for u in self.tableau.modele.lignes if not unite or u["id"] != unite["id"]}
-        parent = f.ajouter("Unité de rattachement", Choix(parents, "Aucune"))
-        province = f.ajouter("Province", Choix(provinces(), "Non renseignée"))
-        ville = f.ajouter("Ville", QLineEdit(unite.get("ville") or "" if unite else ""))
+        parent = f.ajouter(tr("Unité de rattachement"), Choix(parents, tr("Aucune")))
+        province = f.ajouter(tr("Province"), Choix(provinces(), tr("Non renseignée")))
+        ville = f.ajouter(tr("Ville"), QLineEdit(unite.get("ville") or "" if unite else ""))
         lat, lon = QDoubleSpinBox(), QDoubleSpinBox()
         lat.setRange(7.0, 24.0)
         lon.setRange(13.0, 24.5)
         for champ in (lat, lon):
             champ.setDecimals(4)
-        f.ajouter("Latitude", lat)
-        f.ajouter("Longitude", lon)
-        active = f.ajouter("Active", QCheckBox())
+        f.ajouter(tr("Latitude"), lat)
+        f.ajouter(tr("Longitude"), lon)
+        active = f.ajouter(tr("Active"), QCheckBox())
         active.setChecked(unite["active"] if unite else True)
         if unite:
             type_unite.choisir(unite["type_unite"])
@@ -152,7 +153,7 @@ class PageUtilisateurs(Page):
         c = QVBoxLayout(comptes)
         barre = QHBoxLayout()
         self.texte = QLineEdit()
-        self.texte.setPlaceholderText("Identifiant, nom ou matricule")
+        self.texte.setPlaceholderText(tr("Identifiant, nom ou matricule"))
         self.texte.returnPressed.connect(lambda: self.charger(1))
         barre.addWidget(self.texte, 1)
         gerer = session.a("utilisateur.gerer")
@@ -165,49 +166,49 @@ class PageUtilisateurs(Page):
                 b.setObjectName(nom_objet)
             return b
 
-        barre.addWidget(bouton("Rechercher", lambda: self.charger(1)))
-        barre.addWidget(bouton("Nouveau compte", self.creer, gerer, "boutonPrincipal"))
+        barre.addWidget(bouton(tr("Rechercher"), lambda: self.charger(1)))
+        barre.addWidget(bouton(tr("Nouveau compte"), self.creer, gerer, "boutonPrincipal"))
         c.addLayout(barre)
         # Actions sur le compte selectionne, sur deux colonnes pour rester lisibles
         # a la largeur minimale de la fenetre.
         actions = QGridLayout()
         for indice, (libelle, rappel, nom_objet) in enumerate(
             (
-                ("Changer le rôle", self.changer_role, None),
-                ("Révoquer les sessions", self.revoquer, None),
-                ("Réinitialiser le mot de passe", self.reinitialiser, None),
-                ("Réactiver", self.reactiver, None),
-                ("Réinitialiser la MFA", self.reinitialiser_mfa, None),
-                ("Désactiver", self.desactiver, "boutonDanger"),
+                (tr("Changer le rôle"), self.changer_role, None),
+                (tr("Révoquer les sessions"), self.revoquer, None),
+                (tr("Réinitialiser le mot de passe"), self.reinitialiser, None),
+                (tr("Réactiver"), self.reactiver, None),
+                (tr("Réinitialiser la MFA"), self.reinitialiser_mfa, None),
+                (tr("Désactiver"), self.desactiver, "boutonDanger"),
             )
         ):
             actions.addWidget(bouton(libelle, rappel, gerer, nom_objet), indice // 2, indice % 2)
         c.addLayout(actions)
         self.tableau = TableauDonnees(
             [
-                ("identifiant", "Identifiant", None),
-                ("nom", "Nom", None),
-                ("prenoms", "Prénoms", None),
-                ("grade", "Grade", None),
-                ("unite_nom", "Unité", None),
-                ("role_libelle", "Rôle", None),
-                ("portee", "Périmètre", lambda v, _: L.libelle(L.PORTEE, v)),
-                ("actif", "Actif", None),
+                ("identifiant", tr("Identifiant"), None),
+                ("nom", tr("Nom"), None),
+                ("prenoms", tr("Prénoms"), None),
+                ("grade", tr("Grade"), None),
+                ("unite_nom", tr("Unité"), None),
+                ("role_libelle", tr("Rôle"), lambda v, _: tr(v)),
+                ("portee", tr("Périmètre"), lambda v, _: L.libelle(L.PORTEE, v)),
+                ("actif", tr("Actif"), None),
                 ("mfa_active", "MFA", None),
-                ("derniere_connexion", "Dernière connexion", lambda v, _: fmt_date(v)),
+                ("derniere_connexion", tr("Dernière connexion"), lambda v, _: fmt_date(v)),
             ]
         )
         self.tableau.page_demandee.connect(self.charger)
         c.addWidget(self.tableau, 1)
-        self.onglets.addTab(comptes, "Comptes")
+        self.onglets.addTab(comptes, tr("Comptes"))
         self.roles = TableauDonnees(
             [
-                ("libelle", "Rôle", None),
-                ("code", "Code", None),
-                ("portee_defaut", "Périmètre par défaut", lambda v, _: L.libelle(L.PORTEE, v)),
-                ("privilegie", "Privilégié (MFA)", None),
-                ("actif", "Actif", None),
-                ("permissions", "Permissions", lambda v, _: str(len(v))),
+                ("libelle", tr("Rôle"), None),
+                ("code", tr("Code"), None),
+                ("portee_defaut", tr("Périmètre par défaut"), lambda v, _: L.libelle(L.PORTEE, v)),
+                ("privilegie", tr("Privilégié (MFA)"), None),
+                ("actif", tr("Actif"), None),
+                ("permissions", tr("Permissions"), lambda v, _: str(len(v))),
             ],
             pagine=False,
         )
@@ -216,14 +217,14 @@ class PageUtilisateurs(Page):
         r = QVBoxLayout(conteneur)
         r.addWidget(self.roles, 1)
         ligne = QHBoxLayout()
-        nouveau = QPushButton("Nouveau rôle")
+        nouveau = QPushButton(tr("Nouveau rôle"))
         nouveau.setEnabled(session.a("role.gerer"))
         nouveau.clicked.connect(lambda: self.editer_role(None))
-        ligne.addWidget(QLabel("Double-cliquez sur un rôle pour consulter ou modifier ses permissions."))
+        ligne.addWidget(QLabel(tr("Double-cliquez sur un rôle pour consulter ou modifier ses permissions.")))
         ligne.addStretch()
         ligne.addWidget(nouveau)
         r.addLayout(ligne)
-        self.onglets.addTab(conteneur, "Rôles et permissions")
+        self.onglets.addTab(conteneur, tr("Rôles et permissions"))
 
     def charger(self, page: int = 1) -> None:
         params = {"texte": self.texte.text().strip(), "page": page, "taille": 50}
@@ -233,22 +234,24 @@ class PageUtilisateurs(Page):
     def _cible(self) -> dict | None:
         u = self.tableau.selection()
         if not u:
-            QMessageBox.information(self, "Utilisateurs", "Sélectionnez d'abord un compte.")
+            QMessageBox.information(self, tr("Utilisateurs"), tr("Sélectionnez d'abord un compte."))
         return u
 
     def creer(self) -> None:
-        f = FormulaireDialogue("Nouveau compte utilisateur", self)
-        ident = f.ajouter("Identifiant", QLineEdit(), True)
-        nom, prenoms = f.ajouter("Nom", QLineEdit(), True), f.ajouter("Prénoms", QLineEdit(), True)
-        matricule, grade = f.ajouter("Matricule", QLineEdit()), f.ajouter("Grade", QLineEdit())
-        unite = f.ajouter("Unité", Choix({u["id"]: u["nom"] for u in self.session.unites()}))
-        roles = {r["id"]: r["libelle"] for r in self.roles.modele.lignes if not r["privilegie"] and r["actif"]}
-        role = f.ajouter("Rôle (non privilégié)", Choix(roles))
-        mdp = f.ajouter("Mot de passe initial", QLineEdit(), True)
+        f = FormulaireDialogue(tr("Nouveau compte utilisateur"), self)
+        ident = f.ajouter(tr("Identifiant"), QLineEdit(), True)
+        nom, prenoms = f.ajouter(tr("Nom"), QLineEdit(), True), f.ajouter(tr("Prénoms"), QLineEdit(), True)
+        matricule, grade = f.ajouter(tr("Matricule"), QLineEdit()), f.ajouter(tr("Grade"), QLineEdit())
+        unite = f.ajouter(tr("Unité"), Choix({u["id"]: u["nom"] for u in self.session.unites()}))
+        roles = {r["id"]: tr(r["libelle"]) for r in self.roles.modele.lignes if not r["privilegie"] and r["actif"]}
+        role = f.ajouter(tr("Rôle (non privilégié)"), Choix(roles))
+        mdp = f.ajouter(tr("Mot de passe initial"), QLineEdit(), True)
         mdp.setEchoMode(QLineEdit.Password)
         note = QLabel(
-            "Le mot de passe devra être changé à la première connexion. Les rôles privilégiés s'attribuent "
-            "ensuite par une demande soumise à double validation."
+            tr(
+                "Le mot de passe devra être changé à la première connexion. Les rôles privilégiés s'attribuent "
+                "ensuite par une demande soumise à double validation."
+            )
         )
         note.setWordWrap(True)
         note.setObjectName("sousTitrePage")
@@ -273,18 +276,18 @@ class PageUtilisateurs(Page):
         u = self._cible()
         if not u:
             return
-        f = FormulaireDialogue(f"Changer le rôle de {u['identifiant']}", self)
+        f = FormulaireDialogue(tr("Changer le rôle de {identifiant}", identifiant=u["identifiant"]), self)
         role = f.ajouter(
-            "Nouveau rôle",
+            tr("Nouveau rôle"),
             Choix(
                 {
-                    r["id"]: r["libelle"] + (" (privilégié)" if r["privilegie"] else "")
+                    r["id"]: tr(r["libelle"]) + (tr(" (privilégié)") if r["privilegie"] else "")
                     for r in self.roles.modele.lignes
                     if r["actif"]
                 }
             ),
         )
-        motif = f.ajouter("Motif", QPlainTextEdit(), True)
+        motif = f.ajouter(tr("Motif"), QPlainTextEdit(), True)
         f.action = lambda: self.api.post(
             f"/utilisateurs/{u['id']}/role", {"role_id": role.valeur(), "motif": motif.toPlainText().strip()}
         )
@@ -292,8 +295,8 @@ class PageUtilisateurs(Page):
             if f.resultat.get("statut") == "EN_ATTENTE":
                 QMessageBox.information(
                     self,
-                    "Double validation",
-                    "Le rôle demandé est privilégié : la demande doit être approuvée par un second responsable.",
+                    tr("Double validation"),
+                    tr("Le rôle demandé est privilégié : la demande doit être approuvée par un second responsable."),
                 )
             self.charger(self.tableau.page)
 
@@ -301,10 +304,13 @@ class PageUtilisateurs(Page):
         u = self._cible()
         if u and confirmer(
             self,
-            "Désactivation",
-            f"Désactiver immédiatement le compte {u['identifiant']} ?\nToutes ses sessions seront révoquées.",
+            tr("Désactivation"),
+            tr(
+                "Désactiver immédiatement le compte {identifiant} ?\nToutes ses sessions seront révoquées.",
+                identifiant=u["identifiant"],
+            ),
         ):
-            motif = demander_motif(self, "Motif de désactivation", "Motif :")
+            motif = demander_motif(self, tr("Motif de désactivation"), tr("Motif :"))
             if motif and self.appel_direct(
                 lambda: self.api.post(f"/utilisateurs/{u['id']}/desactivation", {"motif": motif})
             ):
@@ -312,7 +318,7 @@ class PageUtilisateurs(Page):
 
     def reactiver(self) -> None:
         u = self._cible()
-        motif = demander_motif(self, "Réactivation", "Motif de la réactivation :") if u else None
+        motif = demander_motif(self, tr("Réactivation"), tr("Motif de la réactivation :")) if u else None
         if motif and self.appel_direct(
             lambda: self.api.post(f"/utilisateurs/{u['id']}/reactivation", {"motif": motif})
         ):
@@ -320,19 +326,25 @@ class PageUtilisateurs(Page):
 
     def revoquer(self) -> None:
         u = self._cible()
-        if u and confirmer(self, "Révocation", f"Fermer toutes les sessions de {u['identifiant']} ?"):
+        if u and confirmer(
+            self, tr("Révocation"), tr("Fermer toutes les sessions de {identifiant} ?", identifiant=u["identifiant"])
+        ):
             r = self.appel_direct(lambda: self.api.post(f"/utilisateurs/{u['id']}/revocation-sessions"))
             if r:
-                QMessageBox.information(self, "Révocation", f"{r['sessions_revoquees']} session(s) révoquée(s).")
+                QMessageBox.information(
+                    self,
+                    tr("Révocation"),
+                    tr("{sessions_revoquees} session(s) révoquée(s).", sessions_revoquees=r["sessions_revoquees"]),
+                )
 
     def reinitialiser(self) -> None:
         u = self._cible()
         if not u:
             return
-        f = FormulaireDialogue(f"Réinitialiser le mot de passe de {u['identifiant']}", self)
-        mdp = f.ajouter("Mot de passe temporaire", QLineEdit(), True)
+        f = FormulaireDialogue(tr("Réinitialiser le mot de passe de {identifiant}", identifiant=u["identifiant"]), self)
+        mdp = f.ajouter(tr("Mot de passe temporaire"), QLineEdit(), True)
         mdp.setEchoMode(QLineEdit.Password)
-        motif = f.ajouter("Motif", QLineEdit(), True)
+        motif = f.ajouter(tr("Motif"), QLineEdit(), True)
         f.action = lambda: avec_reauthentification(
             self,
             self.session,
@@ -345,7 +357,7 @@ class PageUtilisateurs(Page):
 
     def reinitialiser_mfa(self) -> None:
         u = self._cible()
-        motif = demander_motif(self, "Réinitialisation MFA", "Motif (perte du terminal, etc.) :") if u else None
+        motif = demander_motif(self, tr("Réinitialisation MFA"), tr("Motif (perte du terminal, etc.) :")) if u else None
         if motif:
             try:
                 avec_reauthentification(
@@ -362,21 +374,21 @@ class PageUtilisateurs(Page):
         except ErreurAPI as exc:
             afficher_erreur(self, exc)
             return
-        f = FormulaireDialogue("Rôle" if role else "Nouveau rôle", self, 640)
-        code = f.ajouter("Code", QLineEdit(role["code"] if role else ""), True)
+        f = FormulaireDialogue(tr("Rôle") if role else tr("Nouveau rôle"), self, 640)
+        code = f.ajouter(tr("Code"), QLineEdit(role["code"] if role else ""), True)
         code.setEnabled(role is None)
-        libelle = f.ajouter("Libellé", QLineEdit(role["libelle"] if role else ""), True)
-        portee = f.ajouter("Périmètre par défaut", Choix(L.PORTEE))
+        libelle = f.ajouter(tr("Libellé"), QLineEdit(role["libelle"] if role else ""), True)
+        portee = f.ajouter(tr("Périmètre par défaut"), Choix(L.PORTEE))
         liste = QListWidget()
         liste.setMinimumHeight(260)
         actuelles = set(role["permissions"]) if role else set()
         for p in catalogue or [{"code": x, "libelle": x} for x in sorted(actuelles)]:
-            item = QListWidgetItem(f"{p['libelle']}  ({p['code']})")
+            item = QListWidgetItem(tr("{libelle}  ({code})", libelle=tr(p["libelle"]), code=p["code"]))
             item.setData(Qt.UserRole, p["code"])
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
             item.setCheckState(Qt.Checked if p["code"] in actuelles else Qt.Unchecked)
             liste.addItem(item)
-        f.ajouter("Permissions", liste)
+        f.ajouter(tr("Permissions"), liste)
         if role:
             portee.choisir(role["portee_defaut"])
         if not self.session.a("role.gerer"):
@@ -411,13 +423,15 @@ class PageAudit(Page):
         super().__init__(session, parent)
         barre = QHBoxLayout()
         self.identifiant, self.action, self.trace = QLineEdit(), QLineEdit(), QLineEdit()
-        self.identifiant.setPlaceholderText("Identifiant")
-        self.action.setPlaceholderText("Action (ex. RECHERCHE)")
-        self.trace.setPlaceholderText("Identifiant de trace")
-        self.resultat = Choix({"SUCCES": "Succès", "REFUS": "Refus", "ECHEC": "Échec"}, "Tous résultats")
-        filtrer = QPushButton("Filtrer")
+        self.identifiant.setPlaceholderText(tr("Identifiant"))
+        self.action.setPlaceholderText(tr("Action (ex. RECHERCHE)"))
+        self.trace.setPlaceholderText(tr("Identifiant de trace"))
+        self.resultat = Choix(
+            {"SUCCES": tr("Succès"), "REFUS": tr("Refus"), "ECHEC": tr("Échec")}, tr("Tous résultats")
+        )
+        filtrer = QPushButton(tr("Filtrer"))
         filtrer.clicked.connect(lambda: self.charger(1))
-        verifier = QPushButton("Vérifier l'intégrité")
+        verifier = QPushButton(tr("Vérifier l'intégrité"))
         verifier.clicked.connect(self.verifier)
         for w in (self.identifiant, self.action, self.trace, self.resultat, filtrer, verifier):
             barre.addWidget(w)
@@ -425,15 +439,15 @@ class PageAudit(Page):
         self.tableau = TableauDonnees(
             [
                 ("id", "N°", None),
-                ("horodatage", "Horodatage", lambda v, _: fmt_date(v)),
-                ("identifiant", "Utilisateur", None),
-                ("action", "Action", None),
-                ("resultat", "Résultat", None),
-                ("type_ressource", "Ressource", None),
-                ("finalite", "Finalité", None),
-                ("adresse_ip", "Adresse", None),
-                ("trace_id", "Trace", None),
-                ("details", "Détails", lambda v, _: json.dumps(v, ensure_ascii=False) if v else ""),
+                ("horodatage", tr("Horodatage"), lambda v, _: fmt_date(v)),
+                ("identifiant", tr("Utilisateur"), None),
+                ("action", tr("Action"), None),
+                ("resultat", tr("Résultat"), None),
+                ("type_ressource", tr("Ressource"), None),
+                ("finalite", tr("Finalité"), None),
+                ("adresse_ip", tr("Adresse"), None),
+                ("trace_id", tr("Trace"), None),
+                ("details", tr("Détails"), lambda v, _: json.dumps(v, ensure_ascii=False) if v else ""),
             ]
         )
         self.tableau.page_demandee.connect(self.charger)
@@ -456,14 +470,22 @@ class PageAudit(Page):
             return
         if r["integre"]:
             QMessageBox.information(
-                self, "Intégrité du journal", f"Chaîne intègre : {r['evenements_verifies']} événements vérifiés."
+                self,
+                tr("Intégrité du journal"),
+                tr(
+                    "Chaîne intègre : {evenements_verifies} événements vérifiés.",
+                    evenements_verifies=r["evenements_verifies"],
+                ),
             )
         else:
             QMessageBox.critical(
                 self,
-                "Intégrité du journal",
-                f"RUPTURE DÉTECTÉE à l'événement n° {r['rupture_a_id']}. Déclencher la procédure "
-                "de réponse aux incidents.",
+                tr("Intégrité du journal"),
+                tr(
+                    "RUPTURE DÉTECTÉE à l'événement n° {rupture_a_id}. Déclencher la procédure de "
+                    "réponse aux incidents.",
+                    rupture_a_id=r["rupture_a_id"],
+                ),
             )
 
 
@@ -475,23 +497,23 @@ class PageParametres(Page):
         super().__init__(session, parent)
         self.onglets = QTabWidget()
         self.couche.addWidget(self.onglets, 1)
-        self.onglets.addTab(self._onglet_compte(), "Mon compte")
+        self.onglets.addTab(self._onglet_compte(), tr("Mon compte"))
         # Chacun suit ses propres demandes ; les valideurs voient celles de leur perimetre.
         self.validations = TableauDonnees(
             [
-                ("cree_le", "Demandée le", lambda v, _: fmt_date(v)),
-                ("type_action", "Type", lambda v, _: L.libelle(L.TYPE_VALIDATION, v)),
-                ("resume", "Objet", None),
-                ("motif", "Motif", None),
-                ("statut", "Statut", lambda v, _: L.libelle(L.STATUT_VALIDATION, v)),
-                ("resultat", "Résultat", None),
+                ("cree_le", tr("Demandée le"), lambda v, _: fmt_date(v)),
+                ("type_action", tr("Type"), lambda v, _: L.libelle(L.TYPE_VALIDATION, v)),
+                ("resume", tr("Objet"), None),
+                ("motif", tr("Motif"), None),
+                ("statut", tr("Statut"), lambda v, _: L.libelle(L.STATUT_VALIDATION, v)),
+                ("resultat", tr("Résultat"), None),
             ]
         )
         conteneur = QWidget()
         v = QVBoxLayout(conteneur)
         v.addWidget(self.validations, 1)
         ligne = QHBoxLayout()
-        for texte, approuver in (("Approuver", True), ("Rejeter", False)):
+        for texte, approuver in ((tr("Approuver"), True), (tr("Rejeter"), False)):
             b = QPushButton(texte)
             b.setEnabled(session.a("validation.approuver"))
             b.clicked.connect(lambda _, a=approuver: self.decider(a))
@@ -499,16 +521,16 @@ class PageParametres(Page):
         ligne.addStretch()
         v.addLayout(ligne)
         self.validations.page_demandee.connect(self.charger_validations)
-        self.onglets.addTab(conteneur, "Demandes de double validation")
+        self.onglets.addTab(conteneur, tr("Demandes de double validation"))
         if session.a("categorie.gerer"):
             self.categories = TableauDonnees(
                 [
-                    ("code", "Code", None),
-                    ("libelle", "Libellé", None),
-                    ("reference_legale", "Référence légale", None),
-                    ("validee", "Validée", None),
-                    ("validee_par", "Validée par", None),
-                    ("active", "Active", None),
+                    ("code", tr("Code"), None),
+                    ("libelle", tr("Libellé"), None),
+                    ("reference_legale", tr("Référence légale"), None),
+                    ("validee", tr("Validée"), None),
+                    ("validee_par", tr("Validée par"), None),
+                    ("active", tr("Active"), None),
                 ],
                 pagine=False,
             )
@@ -516,21 +538,21 @@ class PageParametres(Page):
             conteneur = QWidget()
             v = QVBoxLayout(conteneur)
             v.addWidget(self.categories, 1)
-            b = QPushButton("Nouvelle catégorie")
+            b = QPushButton(tr("Nouvelle catégorie"))
             b.clicked.connect(lambda: self.editer_categorie(None))
             v.addWidget(b)
-            self.onglets.addTab(conteneur, "Référentiel des faits")
+            self.onglets.addTab(conteneur, tr("Référentiel des faits"))
         if session.a("parametres.gerer"):
             self.parametres = TableauDonnees(
                 [
-                    ("cle", "Paramètre", None),
-                    ("description", "Description", None),
-                    ("valeur", "Valeur", lambda v, _: json.dumps(v, ensure_ascii=False)),
+                    ("cle", tr("Paramètre"), None),
+                    ("description", tr("Description"), None),
+                    ("valeur", tr("Valeur"), lambda v, _: json.dumps(v, ensure_ascii=False)),
                 ],
                 pagine=False,
             )
             self.parametres.ligne_activee.connect(self.editer_parametre)
-            self.onglets.addTab(self.parametres, "Paramètres techniques")
+            self.onglets.addTab(self.parametres, tr("Paramètres techniques"))
         if session.a("validation.approuver"):
             conteneur = QWidget()
             v = QVBoxLayout(conteneur)
@@ -539,12 +561,12 @@ class PageParametres(Page):
             self.conservation.setObjectName("panneau")
             self.conservation.setMargin(12)
             v.addWidget(self.conservation)
-            b = QPushButton("Demander la purge des données échues")
+            b = QPushButton(tr("Demander la purge des données échues"))
             b.setObjectName("boutonDanger")
             b.clicked.connect(self.purge)
             v.addWidget(b)
             v.addStretch()
-            self.onglets.addTab(conteneur, "Conservation des données")
+            self.onglets.addTab(conteneur, tr("Conservation des données"))
         if session.a("systeme.superviser"):
             self.supervision = QLabel("")
             self.supervision.setObjectName("panneau")
@@ -555,31 +577,40 @@ class PageParametres(Page):
             v.addWidget(self.supervision, 1)
             ligne = QHBoxLayout()
             if session.a("sauvegarde.gerer"):
-                b = QPushButton("Lancer une sauvegarde chiffrée")
+                b = QPushButton(tr("Lancer une sauvegarde chiffrée"))
                 b.clicked.connect(self.sauvegarder)
                 ligne.addWidget(b)
-            b = QPushButton("Relancer l'analyse antivirus en échec")
+            b = QPushButton(tr("Relancer l'analyse antivirus en échec"))
             b.clicked.connect(lambda: self.appel_direct(lambda: self.api.post("/systeme/documents/reanalyse")))
             ligne.addWidget(b)
             ligne.addStretch()
             v.addLayout(ligne)
-            self.onglets.addTab(conteneur, "Supervision")
+            self.onglets.addTab(conteneur, tr("Supervision"))
 
     def _onglet_compte(self) -> QWidget:
         w = QWidget()
         v = QVBoxLayout(w)
         m = self.session.moi
         infos = QLabel(
-            f"<b>{m['prenoms']} {m['nom']}</b> ({m['identifiant']})<br/>Rôle : {m['role']}<br/>"
-            f"Unité : {m['unite_nom']}<br/>Périmètre : {L.libelle(L.PORTEE, m['portee'])}<br/>"
-            f"Authentification multifacteur : {'activée' if m['mfa_active'] else 'non activée'}<br/><br/>"
-            "<b>Habilitations</b><br/>" + "<br/>".join(sorted(m["libelles_permissions"].values()))
+            tr(
+                "<b>{prenoms} {nom}</b> ({identifiant})<br/>Rôle : {role}<br/>Unité : "
+                "{unite_nom}<br/>Périmètre : {libelle}<br/>Authentification multifacteur : "
+                "{v13}<br/><br/><b>Habilitations</b><br/>",
+                prenoms=m["prenoms"],
+                nom=m["nom"],
+                identifiant=m["identifiant"],
+                role=tr(m["role"]),
+                unite_nom=m["unite_nom"],
+                libelle=L.libelle(L.PORTEE, m["portee"]),
+                v13=tr("activée") if m["mfa_active"] else tr("non activée"),
+            )
+            + "<br/>".join(sorted(tr(v) for v in m["libelles_permissions"].values()))
         )
         infos.setObjectName("panneau")
         infos.setMargin(12)
         infos.setWordWrap(True)
         v.addWidget(infos)
-        b = QPushButton("Changer mon mot de passe")
+        b = QPushButton(tr("Changer mon mot de passe"))
         b.clicked.connect(lambda: DialogueChangementMotDePasse(self.api, self, obligatoire=False).exec())
         v.addWidget(b)
         v.addStretch()
@@ -598,11 +629,16 @@ class PageParametres(Page):
             self.executer(
                 lambda: self.api.get("/conservation/rapport"),
                 lambda r: self.conservation.setText(
-                    f"Sessions expirées à purger : {r['sessions_expirees']}\n"
-                    f"Captures biométriques arrivées à échéance : {r['captures_biometriques_echues']}\n"
-                    f"Plaintes archivées au delà de la durée de conservation : {r['plaintes_archivees_echues']}\n\n"
-                    "Les durées sont fixées par l'institution (paramètres « retention »). La purge est soumise à "
-                    "double validation. Le journal d'audit n'est jamais purgé par l'application."
+                    tr(
+                        "Sessions expirées à purger : {sessions_expirees}\nCaptures biométriques arrivées "
+                        "à échéance : {captures_biometriques_echues}\nPlaintes archivées au delà de la "
+                        "durée de conservation : {plaintes_archivees_echues}\n\nLes durées sont fixées par "
+                        "l'institution (paramètres « retention »). La purge est soumise à double "
+                        "validation. Le journal d'audit n'est jamais purgé par l'application.",
+                        sessions_expirees=r["sessions_expirees"],
+                        captures_biometriques_echues=r["captures_biometriques_echues"],
+                        plaintes_archivees_echues=r["plaintes_archivees_echues"],
+                    )
                 ),
             )
         if hasattr(self, "supervision"):
@@ -618,7 +654,11 @@ class PageParametres(Page):
         d = self.validations.selection()
         if not d:
             return
-        if not confirmer(self, "Double validation", f"{'Approuver' if approuver else 'Rejeter'} : {d['resume']} ?"):
+        if not confirmer(
+            self,
+            tr("Double validation"),
+            tr("{v0} : {resume} ?", v0="Approuver" if approuver else "Rejeter", resume=d["resume"]),
+        ):
             return
         try:
             avec_reauthentification(
@@ -629,15 +669,15 @@ class PageParametres(Page):
         self.charger_validations(self.validations.page)
 
     def editer_categorie(self, c: dict | None) -> None:
-        f = FormulaireDialogue("Catégorie de faits", self)
-        code = f.ajouter("Code", QLineEdit(c["code"] if c else ""), True)
+        f = FormulaireDialogue(tr("Catégorie de faits"), self)
+        code = f.ajouter(tr("Code"), QLineEdit(c["code"] if c else ""), True)
         code.setEnabled(c is None)
-        libelle = f.ajouter("Libellé", QLineEdit(c["libelle"] if c else ""), True)
-        reference = f.ajouter("Référence légale", QLineEdit((c or {}).get("reference_legale") or ""))
-        validee = f.ajouter("Validée par l'autorité compétente", QCheckBox())
+        libelle = f.ajouter(tr("Libellé"), QLineEdit(c["libelle"] if c else ""), True)
+        reference = f.ajouter(tr("Référence légale"), QLineEdit((c or {}).get("reference_legale") or ""))
+        validee = f.ajouter(tr("Validée par l'autorité compétente"), QCheckBox())
         validee.setChecked(bool(c and c["validee"]))
-        par = f.ajouter("Autorité de validation", QLineEdit((c or {}).get("validee_par") or ""))
-        active = f.ajouter("Active", QCheckBox())
+        par = f.ajouter(tr("Autorité de validation"), QLineEdit((c or {}).get("validee_par") or ""))
+        active = f.ajouter(tr("Active"), QCheckBox())
         active.setChecked(c["active"] if c else True)
         donnees = lambda: {
             "libelle": libelle.text().strip(),
@@ -655,14 +695,14 @@ class PageParametres(Page):
             self.charger()
 
     def editer_parametre(self, p: dict) -> None:
-        f = FormulaireDialogue(f"Paramètre {p['cle']}", self)
-        texte = f.ajouter("Valeur (JSON)", QPlainTextEdit(json.dumps(p["valeur"], ensure_ascii=False, indent=2)))
+        f = FormulaireDialogue(tr("Paramètre {cle}", cle=p["cle"]), self)
+        texte = f.ajouter(tr("Valeur (JSON)"), QPlainTextEdit(json.dumps(p["valeur"], ensure_ascii=False, indent=2)))
 
         def _action():
             try:
                 valeur = json.loads(texte.toPlainText())
             except json.JSONDecodeError as exc:
-                raise ValueError(f"JSON invalide : {exc}") from exc
+                raise ValueError(tr("JSON invalide : {exc}", exc=exc)) from exc
             return avec_reauthentification(
                 self, self.session, lambda: self.api.put(f"/parametres/{p['cle']}", {"valeur": valeur})
             )
@@ -672,9 +712,13 @@ class PageParametres(Page):
             self.charger()
 
     def purge(self) -> None:
-        motif = demander_motif(self, "Purge des données échues", "Motif et référence de la décision institutionnelle :")
+        motif = demander_motif(
+            self, tr("Purge des données échues"), tr("Motif et référence de la décision institutionnelle :")
+        )
         if motif and self.appel_direct(lambda: self.api.post("/conservation/purge", {"motif": motif})):
-            QMessageBox.information(self, "Purge", "Demande enregistrée : elle sera exécutée après double validation.")
+            QMessageBox.information(
+                self, tr("Purge"), tr("Demande enregistrée : elle sera exécutée après double validation.")
+            )
 
     def sauvegarder(self) -> None:
         try:
@@ -683,5 +727,7 @@ class PageParametres(Page):
             afficher_erreur(self, exc)
             return
         if r:
-            QMessageBox.information(self, "Sauvegarde", f"Sauvegarde créée : {r['sauvegarde']}")
+            QMessageBox.information(
+                self, tr("Sauvegarde"), tr("Sauvegarde créée : {sauvegarde}", sauvegarde=r["sauvegarde"])
+            )
             self.charger()

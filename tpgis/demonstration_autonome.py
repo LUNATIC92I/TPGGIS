@@ -27,6 +27,8 @@ import traceback
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from tpgis.shared.i18n import tr
+
 NOM_DOSSIER = "TPGIS_Demonstration"
 
 # Comptes proposes a l'ecran de connexion (identifiant, libelle).
@@ -98,7 +100,7 @@ def preparer_serveur(dossier: Path, signaler=lambda _m: None):
     dossier.mkdir(parents=True, exist_ok=True)
     # Les cles locales de demonstration sont creees sous ./var : on travaille dans le dossier dedie.
     os.chdir(dossier)
-    signaler("Certificats de démonstration…")
+    signaler(tr("Certificats de démonstration…"))
     tls = _certificats(dossier)
     base = dossier / "tpgis_demo.sqlite3"
     premiere_fois = not base.exists()
@@ -114,10 +116,10 @@ def preparer_serveur(dossier: Path, signaler=lambda _m: None):
         antivirus="simulation",
         biometrie_adaptateur="simulation",
     )
-    signaler("Base de démonstration…")
+    signaler(tr("Base de démonstration…"))
     app = creer_application(p)
     if premiere_fois:
-        signaler("Création des données fictives (premier lancement)…")
+        signaler(tr("Création des données fictives (premier lancement)…"))
         with app.state.fabrique.transaction() as bd:
             generer(bd, p, Volumes())
     return app, p
@@ -149,7 +151,7 @@ class ServeurLocal:
         limite = time.monotonic() + delai
         while not self.serveur.started:
             if not self.fil.is_alive() or time.monotonic() > limite:
-                raise RuntimeError("Le serveur local de démonstration n'a pas pu démarrer.")
+                raise RuntimeError(tr("Le serveur local de démonstration n'a pas pu démarrer."))
             time.sleep(0.05)
 
     def arreter(self) -> None:
@@ -167,7 +169,7 @@ def comptes_demo():
         comptes.append(
             CompteDemo(
                 identifiant=identifiant,
-                libelle=f"{libelle}{'  [MFA]' if mfa else ''}",
+                libelle=f"{tr(libelle)}{'  [MFA]' if mfa else ''}",
                 mot_de_passe=MOT_DE_PASSE_DEMO,
                 code_mfa=(lambda i=identifiant: code_totp_demo(i)) if mfa else None,
             )
@@ -219,10 +221,10 @@ def _image_attente():
     p.setFont(QFont("Segoe UI", 26, QFont.Bold))
     p.drawText(QRectF(164, 60, 330, 44), Qt.AlignLeft | Qt.AlignVCenter, identite().nom)
     p.setFont(QFont("Segoe UI", 11, QFont.DemiBold))
-    p.drawText(QRectF(164, 106, 330, 24), Qt.AlignLeft | Qt.AlignVCenter, "Démonstration autonome")
+    p.drawText(QRectF(164, 106, 330, 24), Qt.AlignLeft | Qt.AlignVCenter, tr("Démonstration autonome"))
     p.setPen(QColor(theme["navigation_indicateur"]))
     p.setFont(QFont("Segoe UI", 9))
-    mention = "Données entièrement fictives, aucune donnée réelle"
+    mention = tr("Données entièrement fictives, aucune donnée réelle")
     p.drawText(QRectF(164, 132, 330, 40), Qt.AlignLeft | Qt.TextWordWrap, mention)
     p.end()
     return image
@@ -244,7 +246,7 @@ def main() -> int:
     app_qt = client.creer_application_qt()
     config = ConfigurationClient(theme="clair")
     client.appliquer_identite(config)
-    app_qt.setApplicationName(f"{identite().nom} Démonstration")
+    app_qt.setApplicationName(tr("{nom} Démonstration", nom=identite().nom))
     client.appliquer_theme(app_qt, client.preference_theme(config))
 
     class Ecran(QSplashScreen):
@@ -253,14 +255,14 @@ def main() -> int:
 
     ecran = Ecran(_image_attente())
     ecran.show()
-    ecran.message("Démarrage…")
+    ecran.message(tr("Démarrage…"))
     app_qt.processEvents()
 
     serveur = None
     try:
         application, p = _executer_avec_attente(app_qt, ecran, lambda signaler: preparer_serveur(dossier, signaler))
         serveur = ServeurLocal(application, p)
-        ecran.message("Démarrage du serveur local sécurisé…")
+        ecran.message(tr("Démarrage du serveur local sécurisé…"))
         _executer_avec_attente(app_qt, ecran, lambda _s: serveur.demarrer())
         config.url_serveur = f"https://127.0.0.1:{p.port}"
         config.certificat_ca = str(p.tls_certificat.parent / "ac_demo.crt")
@@ -271,8 +273,8 @@ def main() -> int:
         logging.getLogger("tpgis").exception("Echec de la demonstration")
         QMessageBox.critical(
             None,
-            "Démonstration indisponible",
-            f"La démonstration TPGIS n'a pas pu démarrer :\n{exc}\n\nJournal : {journal}",
+            tr("Démonstration indisponible"),
+            tr("La démonstration TPGIS n'a pas pu démarrer :\n{exc}\n\nJournal : {journal}", exc=exc, journal=journal),
         )
         return 1
     finally:

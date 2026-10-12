@@ -30,6 +30,7 @@ from tpgis.client.windows.faits_dossiers import PageDossiers, PageFaits
 from tpgis.client.windows.personnes import PagePersonnes
 from tpgis.client.windows.plaintes import PagePlaintes
 from tpgis.client.windows.recherche import PageDocuments, PageRecherche
+from tpgis.shared.i18n import LANGUES, langue_courante, tr
 
 # (libelle, icone, classe, permissions dont l'une suffit ; None : toujours visible)
 MODULES = [
@@ -49,8 +50,24 @@ MODULES = [
 ]
 
 
+class DefilementHorizontal(QScrollArea):
+    """Defilement horizontal uniquement : la hauteur minimale des pages reste imposee a la fenetre
+    (les tableaux defilent eux memes), seule une largeur insuffisante fait apparaitre une barre."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    def minimumSizeHint(self):  # noqa: N802
+        taille = super().minimumSizeHint()
+        if self.widget() is not None:
+            taille.setHeight(self.widget().minimumSizeHint().height())
+        return taille
+
+
 class FenetrePrincipale(QMainWindow):
     deconnexion_demandee = Signal()
+    langue_changee = Signal()
 
     def __init__(self, session: SessionClient, config=None):
         super().__init__()
@@ -75,7 +92,7 @@ class FenetrePrincipale(QMainWindow):
         self.pages = QStackedWidget()
         # Filet de securite pour les polices agrandies ou les mises a l'echelle extremes :
         # une barre de defilement apparait plutot que des boutons tronques.
-        self.defilement = QScrollArea()
+        self.defilement = DefilementHorizontal()
         self.defilement.setObjectName("defilementPages")
         self.defilement.setWidget(self.pages)
         self.defilement.setWidgetResizable(True)
@@ -92,9 +109,13 @@ class FenetrePrincipale(QMainWindow):
         self.minuterie = QTimer(self)
         self.minuterie.timeout.connect(self._verifier_session)
         self.minuterie.start(60_000)
-        self.statusBar().showMessage(f"Connecté au serveur {session.api.url}  |  Toutes les actions sont journalisées.")
+        self.statusBar().showMessage(
+            tr("Connecté au serveur {url}  |  Toutes les actions sont journalisées.", url=session.api.url)
+        )
         if session.donnees_fictives:
-            mention = QLabel(f"Environnement {session.environnement.upper()} : données et chiffres fictifs")
+            mention = QLabel(
+                tr("Environnement {upper} : données et chiffres fictifs", upper=session.environnement.upper())
+            )
             mention.setObjectName("mentionFictive")
             self.statusBar().addPermanentWidget(mention)
         notificateur.theme_change.connect(self._theme_change)
@@ -106,27 +127,42 @@ class FenetrePrincipale(QMainWindow):
         h.setContentsMargins(16, 6, 16, 6)
         logo = QLabel()
         logo.setPixmap(identite().pixmap_logo(38))
-        logo.setAccessibleName(f"Logo {identite().nom}")
+        logo.setAccessibleName(tr("Logo {nom}", nom=identite().nom))
         h.addWidget(logo)
         h.addSpacing(6)
         titres = QVBoxLayout()
         titres.setSpacing(0)
         t = QLabel(identite().nom)
         t.setObjectName("titreApplication")
-        s = QLabel(identite().sous_titre)
+        s = QLabel(tr(identite().sous_titre))
         s.setObjectName("sousTitreApplication")
         titres.addWidget(t)
         titres.addWidget(s)
         h.addLayout(titres)
         h.addStretch()
         m = self.session.moi
-        info = QLabel(f"{m.get('grade') or ''} {m['prenoms']} {m['nom']}  |  {m['role']}  |  {m['unite_nom']}")
+        info = QLabel(
+            tr(
+                "{v0} {prenoms} {nom}  |  {role}  |  {unite_nom}",
+                v0=m.get("grade") or "",
+                prenoms=m["prenoms"],
+                nom=m["nom"],
+                role=tr(m["role"]),
+                unite_nom=m["unite_nom"],
+            )
+        )
         info.setObjectName("infoUtilisateur")
         h.addWidget(info)
         self.bouton_theme = QPushButton()
         self.bouton_theme.clicked.connect(self.basculer_theme)
         h.addWidget(self.bouton_theme)
-        self.bouton_deconnexion = QPushButton("Se déconnecter")
+        # Bascule de langue : la fenetre est reconstruite sans nouvelle connexion.
+        autre = "en" if langue_courante() == "fr" else "fr"
+        self.bouton_langue = QPushButton(LANGUES[autre])
+        self.bouton_langue.setToolTip("Langue de l'interface / Interface language")
+        self.bouton_langue.clicked.connect(lambda: self.changer_langue(autre))
+        h.addWidget(self.bouton_langue)
+        self.bouton_deconnexion = QPushButton(tr("Se déconnecter"))
         self.bouton_deconnexion.clicked.connect(self.deconnecter)
         h.addWidget(self.bouton_deconnexion)
         self._icones_bandeau()
@@ -134,10 +170,17 @@ class FenetrePrincipale(QMainWindow):
 
     def _icones_bandeau(self) -> None:
         sombre = theme_courant().sombre
-        self.bouton_theme.setText("Affichage clair" if sombre else "Affichage sombre")
-        self.bouton_theme.setToolTip("Basculer entre l'affichage clair (par défaut) et l'affichage sombre")
+        self.bouton_theme.setText(tr("Affichage clair") if sombre else tr("Affichage sombre"))
+        self.bouton_theme.setToolTip(tr("Basculer entre l'affichage clair (par défaut) et l'affichage sombre"))
         self.bouton_theme.setIcon(icone("theme_clair" if sombre else "theme_sombre", "bandeau_texte", 16))
         self.bouton_deconnexion.setIcon(icone("deconnexion", "bandeau_texte", 16))
+
+    def changer_langue(self, langue: str) -> None:
+        from tpgis.client.langue import enregistrer_langue
+
+        enregistrer_langue(langue)
+        self.minuterie.stop()
+        self.langue_changee.emit()
 
     def basculer_theme(self) -> None:
         nom = "clair" if theme_courant().sombre else "sombre"
@@ -159,7 +202,7 @@ class FenetrePrincipale(QMainWindow):
                 continue
             page = classe(self.session, **(options if classe is PageCartographie else {}))
             self.pages.addWidget(page)
-            item = QListWidgetItem(icone(nom_icone), libelle)
+            item = QListWidgetItem(icone(nom_icone), tr(libelle))
             item.setData(Qt.UserRole, nom_icone)
             self.navigation.addItem(item)
 
@@ -171,10 +214,10 @@ class FenetrePrincipale(QMainWindow):
                 self.minuterie.stop()
                 from PySide6.QtWidgets import QMessageBox
 
-                QMessageBox.warning(self, "Session terminée", str(exc))
+                QMessageBox.warning(self, tr("Session terminée"), str(exc))
                 self.deconnexion_demandee.emit()
             else:
-                self.statusBar().showMessage(f"Serveur indisponible : {exc.message}")
+                self.statusBar().showMessage(tr("Serveur indisponible : {message}", message=exc.message))
 
     def deconnecter(self) -> None:
         self.minuterie.stop()

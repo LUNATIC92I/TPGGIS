@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QWidget
 
 from tpgis.client.theme import notificateur, theme_courant
 from tpgis.client.theme.jetons import RAYONS
+from tpgis.shared.i18n import tr
 
 
 def _couleurs() -> tuple[QColor, QColor, QColor, QColor, QColor]:
@@ -60,7 +61,7 @@ class GraphiqueColonnes(_Graphique):
         p.drawText(QRectF(12, 6, self.width() - 24, 20), Qt.AlignLeft, self.titre)
         if not self.donnees:
             p.setPen(GRIS_TEXTE)
-            p.drawText(self.rect(), Qt.AlignCenter, "Aucune donnée sur la période")
+            p.drawText(self.rect(), Qt.AlignCenter, tr("Aucune donnée sur la période"))
             return
         zone = QRectF(40, 34, self.width() - 56, self.height() - 70)
         maximum = max(4, -(-max(v for _, v in self.donnees) // 4) * 4)
@@ -108,7 +109,7 @@ class GraphiqueBarres(_Graphique):
         p.drawText(QRectF(12, 6, self.width() - 24, 20), Qt.AlignLeft, self.titre)
         if not self.donnees:
             p.setPen(GRIS_TEXTE)
-            p.drawText(self.rect(), Qt.AlignCenter, "Aucune donnée sur la période")
+            p.drawText(self.rect(), Qt.AlignCenter, tr("Aucune donnée sur la période"))
             return
         maximum = max(v for _, v in self.donnees) or 1
         hauteur = (self.height() - 40) / len(self.donnees)

@@ -1,18 +1,32 @@
-"""Erreurs metier converties en reponses HTTP explicites (en francais)."""
+"""Erreurs metier converties en reponses HTTP explicites.
+
+Le message est un modele francais (cle du catalogue de traduction) dont les
+parties variables sont des parametres nommes : la reponse est traduite dans la
+langue demandee par le client (en tete Accept-Language).
+"""
 
 from __future__ import annotations
+
+from tpgis.shared.i18n import traduire
 
 
 class ErreurMetier(Exception):
     statut_http = 400
     code = "ERREUR"
 
-    def __init__(self, message: str, *, code: str | None = None, details: dict | None = None):
-        super().__init__(message)
-        self.message = message
+    def __init__(
+        self, message: str, *, code: str | None = None, details: dict | None = None, parametres: dict | None = None
+    ):
+        self.modele = message
+        self.parametres = parametres or {}
+        self.message = message.format(**self.parametres) if self.parametres else message
+        super().__init__(self.message)
         if code:
             self.code = code
         self.details = details or {}
+
+    def message_traduit(self, langue: str | None) -> str:
+        return traduire(self.modele, langue, **self.parametres)
 
 
 class NonAuthentifie(ErreurMetier):

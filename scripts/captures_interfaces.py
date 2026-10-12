@@ -210,3 +210,46 @@ for theme in ("clair", "sombre"):
 appliquer_theme(app, "clair")
 fenetre.close()
 print("termine 3")
+
+# 6. Interface en anglais (choix de la langue)
+from tpgis.client.langue import appliquer_langue  # noqa: E402
+from tpgis.client.windows.plaintes import DialoguePlainte  # noqa: E402
+
+ANGLAIS = CIBLE.parent / "anglais"
+ANGLAIS.mkdir(exist_ok=True)
+appliquer_langue("en")
+d = DialogueConnexion(api, "demonstration")
+d.resize(820, 480)
+d.show()
+attendre(0.6)
+d.grab().save(str(ANGLAIS / "connexion.png"))
+d.close()
+se = session("responsable.ndj")
+fenetre = FenetrePrincipale(se)
+fenetre.resize(1440, 860)
+fenetre.show()
+for i in range(fenetre.navigation.count()):
+    fenetre.navigation.setCurrentRow(i)
+    attendre(1.0)
+    nom = "".join(c if c.isalnum() else "_" for c in fenetre.navigation.item(i).text().lower())
+    fenetre.grab().save(str(ANGLAIS / f"{i + 1:02d}_{nom}.png"))
+    print("anglais", nom)
+fenetre.close()
+plainte = se.api.get("/plaintes", {"taille": 1})["elements"][0]
+capturer(DialoguePlainte(se, plainte["id"]), "../anglais/detail_plainte", (1000, 680))
+capturer(FormulairePlainte(se), "../anglais/formulaire_plainte", (760, 860))
+appliquer_langue("fr")
+print("termine 4")
+
+# Fin : fenetres detruites dans le fil principal avant l'arret de Python (ordre de
+# destruction maitrise, sinon Qt peut planter a la sortie de l'interpreteur).
+import gc  # noqa: E402
+
+from PySide6.QtCore import QCoreApplication, QEvent  # noqa: E402
+
+for w in app.topLevelWidgets():
+    w.close()
+    w.deleteLater()
+QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+gc.collect()
+QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)

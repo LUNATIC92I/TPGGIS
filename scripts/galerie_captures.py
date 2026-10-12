@@ -90,6 +90,15 @@ SECTIONS = [
         ],
     ),
     (
+        "Interface en anglais",
+        [("../anglais/connexion", "Écran de connexion en anglais (choix de la langue en haut à droite)")]
+        + [(f"../anglais/{p.stem}", None) for p in sorted((RACINE / "anglais").glob("[0-9]*.png"))]
+        + [
+            ("../anglais/formulaire_plainte", "Enregistrement d'une plainte, en anglais"),
+            ("../anglais/detail_plainte", "Détail d'une plainte, en anglais"),
+        ],
+    ),
+    (
         "Exécutable Windows (sous Wine)",
         [
             ("../windows_connexion", "TPGIS.exe : connexion (charte précédente)"),
@@ -114,6 +123,8 @@ def titre_auto(stem: str) -> str:
                 reste, n = reste.split("_onglet_")
                 onglet = f", onglet {n}"
             return f"{libelle} : {reste.replace('_', ' ').strip().capitalize()}{onglet}"
+    if stem.startswith("../anglais/"):
+        return "Interface en anglais : " + stem.split("_", 1)[1].replace("_", " ").capitalize()
     return stem
 
 

@@ -6,7 +6,7 @@ Ce document distingue ce qui a été **exécuté et vérifié** de ce qui ne l'a
 
 | Campagne | Environnement | Résultat |
 |---|---|---|
-| Suite complète sur SQLite, après la charte graphique et l'exécutable de démonstration (11 octobre 2026) | Python 3.13.16, Linux | 143 tests réussis, 1 ignoré (démon ClamAV réel non fourni pour cette exécution) |
+| Suite complète sur SQLite, après l'interface bilingue (12 octobre 2026) | Python 3.13.16, Linux | 153 tests réussis, 1 ignoré (démon ClamAV réel non fourni pour cette exécution) |
 | Suite complète sur SQLite | Python 3.13.16, Linux | 121 tests réussis (avec démon ClamAV réel) |
 | Suite complète sur PostgreSQL 16.15 | Python 3.13.16, Linux | 121 tests réussis |
 | Suite complète sur SQLite, dépendances verrouillées | Python 3.12.3, Linux | 121 tests réussis |
@@ -63,6 +63,10 @@ Commande : `QT_QPA_PLATFORM=offscreen python -m pytest` (ajouter `TPGIS_TEST_DAT
 | Chiffres signalés fictifs hors production (interface et rapport PDF), absents en production | `test_chiffres_signales_fictifs_hors_production`, `test_rapport_pdf_couverture_et_mention_fictive` |
 | Nom et logo du logiciel configurables, logo par défaut sans emblème | `test_nom_et_logo_configurables`, `test_logo_par_defaut_sans_embleme_officiel` |
 | Carte du Tchad : empreintes des données, 23 codes ISO 3166-2:TD, emprise, localisation de N'Djamena et d'Abéché | `test_donnees_geographiques_verifiees` |
+| Interface bilingue : chaque texte affiché a sa traduction anglaise, aucune entrée inutile, paramètres identiques dans les deux langues | `test_chaque_texte_affiche_a_sa_traduction_anglaise`, `test_catalogue_sans_entree_orpheline`, `test_parametres_identiques_et_traductions_non_vides` |
+| Interface bilingue : toutes les pages et leurs onglets, pour cinq profils, et les fenêtres de détail et de saisie, sans texte resté en français | `test_toutes_les_pages_en_anglais`, `test_fenetres_de_detail_et_formulaires_en_anglais` |
+| Choix de la langue à la connexion et bascule depuis le bandeau sans nouvelle connexion | `test_choix_de_la_langue_a_la_connexion`, `test_bascule_de_langue_depuis_le_bandeau` |
+| Messages d'erreur du serveur dans la langue demandée (en tête `Accept-Language`), avec repli sur le français | `test_messages_du_serveur_dans_la_langue_demandee`, `test_message_a_parametres_traduit`, `test_traduction_et_repli_sur_le_francais` |
 
 ## 4. Vérifications manuelles réalisées
 

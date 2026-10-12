@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 
 from tpgis.client.api_client.client import ErreurAPI
 from tpgis.client.widgets.ressources import chemin_ressource  # noqa: F401  (reexport)
+from tpgis.shared.i18n import tr
 
 
 def fmt_date(valeur: Any) -> str:
@@ -52,11 +53,11 @@ class TitrePage(QWidget):
         super().__init__(parent)
         couche = QVBoxLayout(self)
         couche.setContentsMargins(0, 0, 0, 6)
-        t = QLabel(titre)
+        t = QLabel(tr(titre))
         t.setObjectName("titrePage")
         couche.addWidget(t)
         if sous_titre:
-            s = QLabel(sous_titre)
+            s = QLabel(tr(sous_titre))
             s.setObjectName("sousTitrePage")
             s.setWordWrap(True)
             couche.addWidget(s)
@@ -68,11 +69,13 @@ class MentionFictive(QLabel):
     TEXTE = "Chiffres fictifs : données de démonstration"
 
     def __init__(self, texte: str | None = None, parent: QWidget | None = None):
-        super().__init__(texte or self.TEXTE, parent)
+        super().__init__(texte or tr(self.TEXTE), parent)
         self.setObjectName("mentionFictive")
         self.setToolTip(
-            "Environnement hors production : toutes les données et tous les chiffres affichés sont fictifs "
-            "et générés pour la démonstration."
+            tr(
+                "Environnement hors production : toutes les données et tous les chiffres affichés sont fictifs "
+                "et générés pour la démonstration."
+            )
         )
 
 
@@ -106,13 +109,13 @@ class ModeleDictionnaires(QAbstractTableModel):
             if formateur:
                 return formateur(valeur, ligne)
             if isinstance(valeur, bool):
-                return "Oui" if valeur else "Non"
+                return tr("Oui") if valeur else tr("Non")
             return "" if valeur is None else str(valeur)
         return None
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):  # noqa: N802
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self.colonnes[section][1]
+            return tr(self.colonnes[section][1])
         return None
 
 
@@ -144,8 +147,8 @@ class TableauDonnees(QWidget):
         barre = QHBoxLayout()
         barre.addWidget(self.etat)
         barre.addStretch()
-        self.precedent = QPushButton("Page précédente")
-        self.suivant = QPushButton("Page suivante")
+        self.precedent = QPushButton(tr("Page précédente"))
+        self.suivant = QPushButton(tr("Page suivante"))
         self.precedent.clicked.connect(lambda: self.page_demandee.emit(self.page - 1))
         self.suivant.clicked.connect(lambda: self.page_demandee.emit(self.page + 1))
         if pagine:
@@ -157,14 +160,22 @@ class TableauDonnees(QWidget):
         self.page, self.taille, self.total = resultat["page"], resultat["taille"], resultat["total"]
         self.modele.definir(resultat["elements"])
         pages = max(1, -(-self.total // self.taille))
-        self.etat.setText(f"Page {self.page} sur {pages}  ({self.total} élément{'s' if self.total > 1 else ''})")
+        self.etat.setText(
+            tr(
+                "Page {page} sur {pages}  ({total} élément{v7})",
+                page=self.page,
+                pages=pages,
+                total=self.total,
+                v7="s" if self.total > 1 else "",
+            )
+        )
         self.precedent.setEnabled(self.page > 1)
         self.suivant.setEnabled(self.page < pages)
         self.vue.resizeColumnsToContents()
 
     def definir_lignes(self, lignes: list[dict]) -> None:
         self.modele.definir(lignes)
-        self.etat.setText(f"{len(lignes)} élément{'s' if len(lignes) > 1 else ''}")
+        self.etat.setText(tr("{len} élément{v2}", len=len(lignes), v2="s" if len(lignes) > 1 else ""))
         self.vue.resizeColumnsToContents()
 
     def selection(self) -> dict | None:
@@ -191,7 +202,7 @@ class Choix(QComboBox):
             self.addItem(vide, None)
         elements = options.items() if isinstance(options, dict) else options
         for valeur, texte in elements:
-            self.addItem(texte, valeur)
+            self.addItem(tr(texte), valeur)
             self.setItemData(self.count() - 1, texte, Qt.ToolTipRole)
         # La liste deroulante affiche toujours les libelles en entier.
         self.view().setMinimumWidth(self.view().sizeHintForColumn(0) + 24)
@@ -208,12 +219,12 @@ class Choix(QComboBox):
 class ChampDate(QWidget):
     """Date facultative : la case permet de laisser l'information inconnue."""
 
-    def __init__(self, texte_case: str = "Renseignée", parent=None):
+    def __init__(self, texte_case: str | None = None, parent=None):
         super().__init__(parent)
         couche = QHBoxLayout(self)
         couche.setContentsMargins(0, 0, 0, 0)
-        self.connue = QCheckBox(texte_case)
-        self.connue.setToolTip("Cochez pour renseigner la date ; laissez décoché si elle est inconnue.")
+        self.connue = QCheckBox(texte_case or tr("Renseignée"))
+        self.connue.setToolTip(tr("Cochez pour renseigner la date ; laissez décoché si elle est inconnue."))
         self.date = QDateEdit()
         self.date.setMinimumWidth(118)
         self.date.setCalendarPopup(True)
@@ -236,15 +247,15 @@ class ChampDate(QWidget):
             self.connue.setChecked(False)
 
 
-def afficher_erreur(parent: QWidget | None, exc: Exception, titre: str = "Opération impossible") -> None:
-    texte = str(exc) if isinstance(exc, ErreurAPI) else f"Erreur inattendue : {exc}"
-    QMessageBox.warning(parent, titre, texte)
+def afficher_erreur(parent: QWidget | None, exc: Exception, titre: str | None = None) -> None:
+    texte = str(exc) if isinstance(exc, ErreurAPI) else tr("Erreur inattendue : {exc}", exc=exc)
+    QMessageBox.warning(parent, titre or tr("Opération impossible"), texte)
 
 
 def confirmer(parent: QWidget | None, titre: str, message: str) -> bool:
     boite = QMessageBox(QMessageBox.Question, titre, message, QMessageBox.Yes | QMessageBox.No, parent)
-    boite.button(QMessageBox.Yes).setText("Confirmer")
-    boite.button(QMessageBox.No).setText("Annuler")
+    boite.button(QMessageBox.Yes).setText(tr("Confirmer"))
+    boite.button(QMessageBox.No).setText(tr("Annuler"))
     boite.setDefaultButton(QMessageBox.No)
     return boite.exec() == QMessageBox.Yes
 
@@ -261,13 +272,13 @@ def demander_motif(parent: QWidget | None, titre: str, consigne: str, minimum: i
     erreur.setObjectName("messageErreur")
     couche.addWidget(erreur)
     boutons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-    boutons.button(QDialogButtonBox.Ok).setText("Valider")
-    boutons.button(QDialogButtonBox.Cancel).setText("Annuler")
+    boutons.button(QDialogButtonBox.Ok).setText(tr("Valider"))
+    boutons.button(QDialogButtonBox.Cancel).setText(tr("Annuler"))
     couche.addWidget(boutons)
 
     def _valider():
         if len(texte.toPlainText().strip()) < minimum:
-            erreur.setText(f"Le motif doit comporter au moins {minimum} caractères.")
+            erreur.setText(tr("Le motif doit comporter au moins {minimum} caractères.", minimum=minimum))
             return
         dialogue.accept()
 
@@ -280,8 +291,8 @@ def demander_finalite(parent: QWidget | None, finalites: list[str]) -> str | Non
     """La finalite est obligatoire avant toute consultation nominative ou recherche sensible."""
     choix, ok = QInputDialog.getItem(
         parent,
-        "Finalité de la consultation",
-        "Déclarez la finalité de cette consultation.\nElle est enregistrée dans le journal d'audit.",
+        tr("Finalité de la consultation"),
+        tr("Déclarez la finalité de cette consultation.\nElle est enregistrée dans le journal d'audit."),
         finalites,
         0,
         True,
@@ -306,9 +317,9 @@ class FormulaireDialogue(QDialog):
         self.erreur.setWordWrap(True)
         self.couche.addWidget(self.erreur)
         self.boutons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.boutons.button(QDialogButtonBox.Ok).setText("Enregistrer")
+        self.boutons.button(QDialogButtonBox.Ok).setText(tr("Enregistrer"))
         self.boutons.button(QDialogButtonBox.Ok).setObjectName("boutonPrincipal")
-        self.boutons.button(QDialogButtonBox.Cancel).setText("Annuler")
+        self.boutons.button(QDialogButtonBox.Cancel).setText(tr("Annuler"))
         self.boutons.accepted.connect(self._soumettre)
         self.boutons.rejected.connect(self.reject)
         self.couche.addWidget(self.boutons)

@@ -43,6 +43,7 @@ from PySide6.QtWidgets import (
 from tpgis.client.theme import notificateur, theme_courant
 from tpgis.client.theme.jetons import POLICE_CARTE
 from tpgis.shared.geographie import charger
+from tpgis.shared.i18n import tr
 
 ZOOM_BASE = 6
 TAILLE_TUILE = 256
@@ -268,17 +269,19 @@ class CarteTchad(QGraphicsView):
         self.legende = QLabel(self)
         self.legende.setObjectName("legendeCarte")
         self.source = QLabel(
-            "Limites : © contributeurs OpenStreetMap, geoBoundaries (ODbL). Villes : Natural Earth. "
-            "Limites indicatives.",
+            tr(
+                "Limites : © contributeurs OpenStreetMap, geoBoundaries (ODbL). Villes : Natural Earth. "
+                "Limites indicatives."
+            ),
             self,
         )
         self.source.setObjectName("sourceCarte")
         # Hors production, les chiffres representes sont signales comme fictifs sur la carte elle meme.
         self.mention = None
         if mention_fictive:
-            self.mention = QLabel("Chiffres fictifs", self)
+            self.mention = QLabel(tr("Chiffres fictifs"), self)
             self.mention.setObjectName("mentionFictive")
-            self.mention.setToolTip("Environnement hors production : les valeurs représentées sont fictives.")
+            self.mention.setToolTip(tr("Environnement hors production : les valeurs représentées sont fictives."))
         self._maj_legende([])
         notificateur.theme_change.connect(self._theme_change)
 
@@ -391,16 +394,21 @@ class CarteTchad(QGraphicsView):
             infos = [province.nom]
             if p:
                 if p.get("plaintes_masquees"):
-                    infos.append("Effectif inférieur au seuil de confidentialité")
+                    infos.append(tr("Effectif inférieur au seuil de confidentialité"))
                 else:
-                    infos.append(f"Plaintes sur la période : {p.get('plaintes', 0)}")
+                    infos.append(tr("Plaintes sur la période : {get}", get=p.get("plaintes", 0)))
                     if p.get("plaintes_periode_precedente") is not None:
-                        infos.append(f"Période précédente : {p['plaintes_periode_precedente']}")
+                        infos.append(
+                            tr(
+                                "Période précédente : {plaintes_periode_precedente}",
+                                plaintes_periode_precedente=p["plaintes_periode_precedente"],
+                            )
+                        )
                     if p.get("tendance_pct") is not None:
-                        infos.append(f"Tendance : {p['tendance_pct']:+.1f} %")
-                infos.append(f"Dossiers en cours : {p.get('dossiers_en_cours', 0)}")
+                        infos.append(tr("Tendance : {tendance_pct:+.1f} %", tendance_pct=p["tendance_pct"]))
+                infos.append(tr("Dossiers en cours : {get}", get=p.get("dossiers_en_cours", 0)))
             else:
-                infos.append("Aucune donnée dans votre périmètre")
+                infos.append(tr("Aucune donnée dans votre périmètre"))
             province.setToolTip("\n".join(infos))
         self._maj_legende(bornes)
 
@@ -433,9 +441,9 @@ class CarteTchad(QGraphicsView):
 
     def _maj_legende(self, bornes: list) -> None:
         titres = {
-            "plaintes": "Plaintes enregistrées",
-            "dossiers": "Dossiers en cours",
-            "tendance": "Évolution par rapport à la période précédente",
+            "plaintes": tr("Plaintes enregistrées"),
+            "dossiers": tr("Dossiers en cours"),
+            "tendance": tr("Évolution par rapport à la période précédente"),
         }
         theme = theme_courant()
         sequentielle = theme.carte_sequentielle
@@ -443,25 +451,36 @@ class CarteTchad(QGraphicsView):
         lignes = [f"<b>{titres[self.indicateur]}</b>"]
 
         def case(teinte):
-            return f"<span style='background:{teinte};color:{teinte}'>&nbsp;&nbsp;&nbsp;&nbsp;</span>"
+            return tr(
+                "<span style='background:{teinte};color:{teinte2}'>&nbsp;&nbsp;&nbsp;&nbsp;</span>",
+                teinte=teinte,
+                teinte2=teinte,
+            )
 
         if self.indicateur == "tendance" and bornes:
             lignes += [
-                f"{case(baisse)} baisse de plus de 10 %",
-                f"{case(stable)} stable",
-                f"{case(hausse)} hausse de plus de 10 %",
+                tr("{case} baisse de plus de 10 %", case=case(baisse)),
+                tr("{case} stable", case=case(stable)),
+                tr("{case} hausse de plus de 10 %", case=case(hausse)),
             ]
         elif bornes:
-            lignes.append(f"{case(sequentielle[0])} 0")
+            lignes.append(tr("{case} 0", case=case(sequentielle[0])))
             precedent = 0
             for teinte, borne in zip(sequentielle[1:], bornes, strict=False):
                 debut = precedent + 1
-                lignes.append(f"{case(teinte)} {debut}" + (f" à {borne}" if borne > debut else ""))
+                lignes.append(
+                    tr("{case} {debut}", case=case(teinte), debut=debut)
+                    + (tr(" à {borne}", borne=borne) if borne > debut else "")
+                )
                 precedent = borne
-        lignes.append(f"{case(theme['carte_sans_donnee'])} aucune donnée")
+        lignes.append(tr("{case} aucune donnée", case=case(theme["carte_sans_donnee"])))
         lignes.append(
-            f"<span style='color:{theme['carte_police']}'>&#9632;</span> Police  "
-            f"<span style='color:{theme['carte_gendarmerie']}'>&#9670;</span> Gendarmerie"
+            tr(
+                "<span style='color:{carte_police}'>&#9632;</span> Police  <span "
+                "style='color:{carte_gendarmerie}'>&#9670;</span> Gendarmerie",
+                carte_police=theme["carte_police"],
+                carte_gendarmerie=theme["carte_gendarmerie"],
+            )
         )
         self.legende.setText("<br/>".join(lignes))
         self.legende.adjustSize()

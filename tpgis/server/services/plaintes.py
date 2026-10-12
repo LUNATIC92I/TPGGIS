@@ -118,7 +118,9 @@ def _personne_accessible(bd: SessionBD, ctx: Contexte, personne_id: str) -> Pers
     if p is None:
         raise DonneesInvalides("Personne inconnue ou hors périmètre.")
     if p.statut != StatutPersonne.ACTIVE:
-        raise DonneesInvalides(f"La fiche {p.numero_interne} a été fusionnée : utiliser la fiche conservée.")
+        raise DonneesInvalides(
+            "La fiche {numero} a été fusionnée : utiliser la fiche conservée.", parametres={"numero": p.numero_interne}
+        )
     return p
 
 
@@ -282,7 +284,9 @@ def changer_statut(bd: SessionBD, ctx: Contexte, plainte_id: str, donnees: schem
     _controle_version(p, donnees.version)
     actuel, cible = StatutPlainte(p.statut), donnees.statut
     if cible not in TRANSITIONS_PLAINTE[actuel]:
-        raise DonneesInvalides(f"Transition interdite : {actuel.value} vers {cible.value}.")
+        raise DonneesInvalides(
+            "Transition interdite : {actuel} vers {cible}.", parametres={"actuel": actuel.value, "cible": cible.value}
+        )
     motif = (donnees.motif or "").strip()
     if cible == StatutPlainte.CLOTUREE:
         ctx.exiger(Permission.PLAINTE_CLOTURER)

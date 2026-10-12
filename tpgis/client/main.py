@@ -11,11 +11,13 @@ from PySide6.QtWidgets import QApplication, QDialog, QMessageBox
 from tpgis.client.api_client.client import ClientAPI, ErreurAPI
 from tpgis.client.api_client.travail import Executeur
 from tpgis.client.config import ConfigurationClient, charger_configuration
+from tpgis.client.langue import appliquer_langue, preference_langue
 from tpgis.client.theme import IdentiteVisuelle, definir_identite, identite
 from tpgis.client.theme import appliquer_theme as _appliquer_theme
 from tpgis.client.windows.base import SessionClient
 from tpgis.client.windows.connexion import DialogueChangementMotDePasse, DialogueConnexion, DialogueEnrolementMFA
 from tpgis.client.windows.principale import FenetrePrincipale
+from tpgis.shared.i18n import tr
 
 
 def declarer_extensions_qt() -> None:
@@ -58,7 +60,12 @@ def ouvrir_session(api: ClientAPI, parent=None, environnement: str = "", comptes
     """Connexion complete : identifiants, MFA, changement de mot de passe, enrolement."""
     while True:
         dialogue = DialogueConnexion(api, environnement, parent, comptes_demo=comptes_demo)
-        if dialogue.exec() != QDialog.Accepted:
+        code = dialogue.exec()
+        # Destruction explicite dans le fil principal (jamais par le ramasse miettes d'un autre fil).
+        dialogue.deleteLater()
+        if code == DialogueConnexion.CHANGEMENT_LANGUE:
+            continue
+        if code != QDialog.Accepted:
             return None
         type_session = dialogue.resultat["type_session"]
         if type_session == "CHANGEMENT_MOT_DE_PASSE":
@@ -67,7 +74,9 @@ def ouvrir_session(api: ClientAPI, parent=None, environnement: str = "", comptes
             continue
         if type_session == "ENROLEMENT_MFA":
             if DialogueEnrolementMFA(api, parent).exec() == QDialog.Accepted:
-                QMessageBox.information(parent, "MFA activée", "Reconnectez-vous avec votre code de vérification.")
+                QMessageBox.information(
+                    parent, tr("MFA activée"), tr("Reconnectez-vous avec votre code de vérification.")
+                )
             api.jeton = None
             continue
         return SessionClient(
@@ -89,6 +98,7 @@ def main(config: ConfigurationClient | None = None, comptes_demo=None) -> int:
     appliquer_identite(config)
     app.setApplicationName(identite().nom)
     appliquer_theme(app, preference_theme(config))
+    appliquer_langue(preference_langue(config.langue))
     try:
         api = ClientAPI(
             config.url_serveur,
@@ -97,38 +107,48 @@ def main(config: ConfigurationClient | None = None, comptes_demo=None) -> int:
             autoriser_http_local=config.autoriser_http_local,
         )
     except ValueError as exc:
-        QMessageBox.critical(None, "Configuration invalide", str(exc))
+        QMessageBox.critical(None, tr("Configuration invalide"), str(exc))
         return 2
     try:
         sante = api.verifier_disponibilite()
     except ErreurAPI as exc:
         QMessageBox.critical(
             None,
-            "Serveur indisponible",
-            f"{exc}\n\nAdresse configurée : {config.url_serveur}\n"
-            "Aucune donnée n'est stockée sur ce poste : l'application ne peut pas fonctionner "
-            "sans le serveur institutionnel.",
+            tr("Serveur indisponible"),
+            tr(
+                "{exc}\n\nAdresse configurée : {url_serveur}\nAucune donnée n'est stockée sur ce "
+                "poste : l'application ne peut pas fonctionner sans le serveur institutionnel.",
+                exc=exc,
+                url_serveur=config.url_serveur,
+            ),
         )
         return 3
     if sante.get("statut") != "ok":
-        QMessageBox.warning(None, "Service dégradé", "Le serveur signale un fonctionnement dégradé.")
+        QMessageBox.warning(None, tr("Service dégradé"), tr("Le serveur signale un fonctionnement dégradé."))
 
     fenetre = None
     while True:
         session = ouvrir_session(api, environnement=sante.get("environnement", ""), comptes_demo=comptes_demo)
         if session is None:
             return 0
-        fenetre = FenetrePrincipale(session, config)
-        boucle_fin = {"deconnexion": False}
+        while True:
+            fenetre = FenetrePrincipale(session, config)
+            etat = {"deconnexion": False, "langue": False}
 
-        def _deconnexion(f=fenetre, etat=boucle_fin):
-            etat["deconnexion"] = True
-            f.close()
+            def _fin(cle, f=fenetre, etat=etat):
+                etat[cle] = True
+                f.close()
 
-        fenetre.deconnexion_demandee.connect(_deconnexion)
-        fenetre.showMaximized()
-        app.exec()
-        if not boucle_fin["deconnexion"]:
+            fenetre.deconnexion_demandee.connect(lambda: _fin("deconnexion"))
+            fenetre.langue_changee.connect(lambda: _fin("langue"))
+            fenetre.showMaximized()
+            app.exec()
+            fenetre.deleteLater()
+            if etat["langue"]:
+                # Nouvelle langue : meme session, fenetre reconstruite.
+                continue
+            if etat["deconnexion"]:
+                break
             api.deconnecter()
             return 0
 

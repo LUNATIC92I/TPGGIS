@@ -27,6 +27,7 @@ a = Analysis(
     datas=[
         (str(RACINE / "tpgis" / "client" / "resources"), "tpgis/client/resources"),
         (str(RACINE / "tpgis" / "shared" / "geodata"), "tpgis/shared/geodata"),
+        (str(RACINE / "tpgis" / "shared" / "i18n"), "tpgis/shared/i18n"),
     ],
     hiddenimports=["PySide6.QtSvg"],
     excludes=[

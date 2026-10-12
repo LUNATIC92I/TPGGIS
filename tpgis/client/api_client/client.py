@@ -13,6 +13,8 @@ from urllib.parse import quote, urlparse
 
 import httpx
 
+from tpgis.shared.i18n import langue_courante, tr
+
 MESSAGES_STATUT = {
     401: "Votre session n'est plus valide. Veuillez vous reconnecter.",
     403: "Vous ne disposez pas de l'habilitation nécessaire.",
@@ -38,7 +40,7 @@ class ErreurAPI(Exception):
         if champs:
             texte += "\n" + "\n".join(f"  {c['champ']} : {c['message']}" for c in champs)
         if self.trace_id and self.statut >= 500:
-            texte += f"\n\nIdentifiant de trace : {self.trace_id}"
+            texte += tr("\n\nIdentifiant de trace : {trace_id}", trace_id=self.trace_id)
         return texte
 
 
@@ -61,7 +63,9 @@ class ClientAPI:
         hote = urlparse(url).hostname or ""
         if http is None and schema != "https":
             if not (autoriser_http_local and hote in ("127.0.0.1", "localhost")):
-                raise ValueError("Connexion non chiffrée refusée : l'adresse du serveur doit commencer par https://")
+                raise ValueError(
+                    tr("Connexion non chiffrée refusée : l'adresse du serveur doit commencer par https://")
+                )
         self.url = url
         self.jeton: str | None = None
         self.finalite: str | None = None
@@ -96,7 +100,8 @@ class ClientAPI:
     # Requetes
 
     def _entetes(self, authentifie: bool, finalite: str | None) -> dict:
-        entetes = {}
+        # Les messages d'erreur du serveur sont rendus dans la langue de l'interface.
+        entetes = {"Accept-Language": langue_courante()}
         if authentifie and self.jeton:
             entetes["Authorization"] = f"Bearer {self.jeton}"
         finalite = finalite or self.finalite
@@ -114,28 +119,36 @@ class ClientAPI:
         except httpx.ConnectError as exc:
             if "CERTIFICATE_VERIFY_FAILED" in str(exc) or "certificate" in str(exc).lower():
                 raise ErreurReseau(
-                    "Le certificat du serveur n'a pas pu être vérifié. La connexion a été interrompue pour "
-                    "protéger vos données (risque d'interception). Contactez l'administration technique.",
+                    tr(
+                        "Le certificat du serveur n'a pas pu être vérifié. La connexion a été interrompue pour "
+                        "protéger vos données (risque d'interception). Contactez l'administration technique."
+                    ),
                     code="CERTIFICAT_INVALIDE",
                 ) from exc
             raise ErreurReseau(
-                "Le serveur TPGIS est injoignable. Vérifiez la connexion au réseau institutionnel ou "
-                "contactez l'administration technique.",
+                tr(
+                    "Le serveur TPGIS est injoignable. Vérifiez la connexion au réseau institutionnel ou "
+                    "contactez l'administration technique."
+                ),
                 code="SERVEUR_INJOIGNABLE",
             ) from exc
         except httpx.ProxyError as exc:
             raise ErreurReseau(
-                "Le serveur TPGIS est injoignable à travers le proxy réseau du poste. Vérifiez l'adresse du serveur "
-                "et la configuration du proxy, ou contactez l'administration technique.",
+                tr(
+                    "Le serveur TPGIS est injoignable à travers le proxy réseau du poste. "
+                    "Vérifiez l'adresse du serveur et la configuration du proxy, "
+                    "ou contactez l'administration technique."
+                ),
                 code="SERVEUR_INJOIGNABLE",
             ) from exc
         except httpx.TimeoutException as exc:
             raise ErreurReseau(
-                "Le serveur n'a pas répondu dans le délai imparti. Réessayez plus tard.", code="DELAI_DEPASSE"
+                tr("Le serveur n'a pas répondu dans le délai imparti. Réessayez plus tard."), code="DELAI_DEPASSE"
             ) from exc
         except httpx.HTTPError as exc:
             raise ErreurReseau(
-                f"Erreur de communication avec le serveur ({exc.__class__.__name__}).", code="ERREUR_RESEAU"
+                tr("Erreur de communication avec le serveur ({name}).", name=exc.__class__.__name__),
+                code="ERREUR_RESEAU",
             ) from exc
         if reponse.status_code >= 400:
             try:
@@ -143,7 +156,8 @@ class ClientAPI:
             except ValueError:
                 contenu = {}
             raise ErreurAPI(
-                contenu.get("detail") or MESSAGES_STATUT.get(reponse.status_code, f"Erreur {reponse.status_code}"),
+                contenu.get("detail")
+                or tr(MESSAGES_STATUT.get(reponse.status_code, "Erreur {statut}"), statut=reponse.status_code),
                 statut=reponse.status_code,
                 code=contenu.get("code", "ERREUR"),
                 details=contenu.get("details") or {},

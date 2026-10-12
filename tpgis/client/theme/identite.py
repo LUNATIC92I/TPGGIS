@@ -59,7 +59,9 @@ class IdentiteVisuelle:
 
     @property
     def titre_fenetre(self) -> str:
-        return f"{self.nom} : {self.nom_complet}" if self.nom_complet else self.nom
+        from tpgis.shared.i18n import tr
+
+        return f"{self.nom} : {tr(self.nom_complet)}" if self.nom_complet else self.nom
 
 
 _identite = IdentiteVisuelle()

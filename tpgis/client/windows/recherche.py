@@ -22,6 +22,7 @@ from tpgis.client.windows.base import Page
 from tpgis.client.windows.faits_dossiers import DialogueDossier
 from tpgis.client.windows.personnes import COLONNES_CANDIDATS, DialogueFichePersonne
 from tpgis.client.windows.plaintes import DialoguePlainte, OngletPieces
+from tpgis.shared.i18n import tr
 
 
 class PageRecherche(Page):
@@ -33,7 +34,7 @@ class PageRecherche(Page):
 
     def __init__(self, session, parent=None):
         super().__init__(session, parent)
-        boite = QGroupBox("Critères")
+        boite = QGroupBox(tr("Critères"))
         f = QFormLayout(boite)
         self.finalite = QComboBox()
         self.finalite.setEditable(True)
@@ -42,19 +43,19 @@ class PageRecherche(Page):
         self.numero_plainte, self.numero_dossier, self.numero_interne = QLineEdit(), QLineEdit(), QLineEdit()
         self.nom, self.prenoms, self.lieu, self.document = QLineEdit(), QLineEdit(), QLineEdit(), QLineEdit()
         self.naissance = ChampDate()
-        self.national = QCheckBox("Étendre au périmètre national (habilitation spécifique)")
+        self.national = QCheckBox(tr("Étendre au périmètre national (habilitation spécifique)"))
         self.national.setEnabled(session.a("recherche.nationale"))
-        f.addRow("Finalité déclarée *", self.finalite)
-        f.addRow("Numéro de plainte", self.numero_plainte)
-        f.addRow("Numéro de dossier", self.numero_dossier)
-        f.addRow("Identifiant interne de personne", self.numero_interne)
-        f.addRow("Nom", self.nom)
-        f.addRow("Prénoms", self.prenoms)
-        f.addRow("Date de naissance", self.naissance)
-        f.addRow("Lieu de naissance", self.lieu)
-        f.addRow("Référence de document", self.document)
+        f.addRow(tr("Finalité déclarée *"), self.finalite)
+        f.addRow(tr("Numéro de plainte"), self.numero_plainte)
+        f.addRow(tr("Numéro de dossier"), self.numero_dossier)
+        f.addRow(tr("Identifiant interne de personne"), self.numero_interne)
+        f.addRow(tr("Nom"), self.nom)
+        f.addRow(tr("Prénoms"), self.prenoms)
+        f.addRow(tr("Date de naissance"), self.naissance)
+        f.addRow(tr("Lieu de naissance"), self.lieu)
+        f.addRow(tr("Référence de document"), self.document)
         f.addRow("", self.national)
-        bouton = QPushButton("Lancer la recherche")
+        bouton = QPushButton(tr("Lancer la recherche"))
         bouton.setObjectName("boutonPrincipal")
         bouton.clicked.connect(self.rechercher)
         f.addRow("", bouton)
@@ -71,27 +72,27 @@ class PageRecherche(Page):
         self.personnes.ligne_activee.connect(self.ouvrir_personne)
         self.plaintes = TableauDonnees(
             [
-                ("numero", "Plainte", None),
-                ("statut", "Statut", lambda v, _: L.libelle(L.STATUT_PLAINTE, v)),
-                ("unite", "Unité", None),
-                ("niveau", "Correspondance", None),
+                ("numero", tr("Plainte"), None),
+                ("statut", tr("Statut"), lambda v, _: L.libelle(L.STATUT_PLAINTE, v)),
+                ("unite", tr("Unité"), None),
+                ("niveau", tr("Correspondance"), None),
             ],
             pagine=False,
         )
         self.plaintes.ligne_activee.connect(lambda p: DialoguePlainte(self.session, p["id"], self).exec())
         self.dossiers = TableauDonnees(
             [
-                ("numero", "Dossier", None),
-                ("intitule", "Intitulé", None),
-                ("statut", "Statut", None),
-                ("niveau", "Correspondance", None),
+                ("numero", tr("Dossier"), None),
+                ("intitule", tr("Intitulé"), None),
+                ("statut", tr("Statut"), None),
+                ("niveau", tr("Correspondance"), None),
             ],
             pagine=False,
         )
         self.dossiers.ligne_activee.connect(lambda d: DialogueDossier(self.session, d["id"], self).exec())
-        self.onglets.addTab(self.personnes, "Personnes")
-        self.onglets.addTab(self.plaintes, "Plaintes")
-        self.onglets.addTab(self.dossiers, "Dossiers")
+        self.onglets.addTab(self.personnes, tr("Personnes"))
+        self.onglets.addTab(self.plaintes, tr("Plaintes"))
+        self.onglets.addTab(self.dossiers, tr("Dossiers"))
         self.couche.addWidget(self.onglets, 1)
 
     def charger(self) -> None:
@@ -107,7 +108,7 @@ class PageRecherche(Page):
     def rechercher(self) -> None:
         finalite = self.finalite.currentText().strip()
         if len(finalite) < 5:
-            self.info.setText("Déclarez la finalité de la recherche (5 caractères minimum).")
+            self.info.setText(tr("Déclarez la finalité de la recherche (5 caractères minimum)."))
             self.info.show()
             return
         demande = {"finalite": finalite, "etendre_national": self.national.isChecked()}
@@ -133,7 +134,12 @@ class PageRecherche(Page):
         self.plaintes.definir_lignes(res["plaintes"])
         self.dossiers.definir_lignes(res["dossiers"])
         self.info.setText(
-            f"{r['avertissement']}\n\nTrace d'audit : {r['trace_audit']}\nHorodatage : {fmt_date(r['horodatage'])}"
+            tr(
+                "{avertissement}\n\nTrace d'audit : {trace_audit}\nHorodatage : {fmt_date}",
+                avertissement=r["avertissement"],
+                trace_audit=r["trace_audit"],
+                fmt_date=fmt_date(r["horodatage"]),
+            )
         )
         self.info.show()
         for i, t in enumerate((res["personnes"], res["plaintes"], res["dossiers"])):
@@ -156,12 +162,12 @@ class PageDocuments(Page):
         super().__init__(session, parent)
         barre = QHBoxLayout()
         self.type = QComboBox()
-        self.type.addItem("Plainte", "plainte")
-        self.type.addItem("Dossier", "dossier")
+        self.type.addItem(tr("Plainte"), "plainte")
+        self.type.addItem(tr("Dossier"), "dossier")
         self.numero = QLineEdit()
-        self.numero.setPlaceholderText("Numéro exact (PL-... ou DO-...)")
+        self.numero.setPlaceholderText(tr("Numéro exact (PL-... ou DO-...)"))
         self.numero.returnPressed.connect(self.ouvrir)
-        bouton = QPushButton("Afficher les pièces")
+        bouton = QPushButton(tr("Afficher les pièces"))
         bouton.setObjectName("boutonPrincipal")
         bouton.clicked.connect(self.ouvrir)
         barre.addWidget(self.type)
@@ -187,10 +193,12 @@ class PageDocuments(Page):
             return
         trouve = next((e for e in elements if e["numero"] == numero), None)
         if not trouve:
-            self.titre_parent.setText("Aucun élément ne correspond à ce numéro dans votre périmètre.")
+            self.titre_parent.setText(tr("Aucun élément ne correspond à ce numéro dans votre périmètre."))
             return
         if self.onglet:
             self.onglet.setParent(None)
         self.onglet = OngletPieces(self.session, f"{type_parent}_id", trouve["id"], self)
         self.zone.addWidget(self.onglet)
-        self.titre_parent.setText(f"Pièces de {'la plainte' if type_parent == 'plainte' else 'du dossier'} {numero}")
+        self.titre_parent.setText(
+            tr("Pièces de {v1} {numero}", v1="la plainte" if type_parent == "plainte" else "du dossier", numero=numero)
+        )

@@ -1,8 +1,9 @@
-"""Libelles francais des valeurs codees affichees dans l'interface."""
+"""Libelles des valeurs codees affichees dans l'interface (francais, traduits a l'affichage)."""
 
 from __future__ import annotations
 
 from tpgis.shared.enums import LIBELLES_NATURE_INFORMATION, LIBELLES_ROLE_PERSONNE, LIBELLES_STATUT_PLAINTE
+from tpgis.shared.i18n import tr
 
 STATUT_PLAINTE = {str(k): v for k, v in LIBELLES_STATUT_PLAINTE.items()}
 ROLE_PERSONNE = {str(k): v for k, v in LIBELLES_ROLE_PERSONNE.items()}
@@ -112,3 +113,24 @@ def libelle(table: dict, valeur) -> str:
     if valeur is None or valeur == "":
         return ""
     return table.get(str(valeur), str(valeur))
+
+
+class Libelles(dict):
+    """Table de libelles francais traduits a la lecture, dans la langue courante de l'interface."""
+
+    def __getitem__(self, cle):
+        return tr(super().__getitem__(cle))
+
+    def get(self, cle, defaut=None):
+        return tr(super().get(cle, defaut)) if cle in self else defaut
+
+    def items(self):
+        return [(k, tr(v)) for k, v in super().items()]
+
+    def values(self):
+        return [tr(v) for v in super().values()]
+
+
+for _nom, _table in list(globals().items()):
+    if _nom.isupper() and isinstance(_table, dict) and not isinstance(_table, Libelles):
+        globals()[_nom] = Libelles(_table)

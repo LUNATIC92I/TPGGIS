@@ -10,9 +10,13 @@ Ce guide s'adresse aux personnels habilités de la Police nationale et de la Gen
 4. À la première connexion, changez votre mot de passe (12 caractères au moins, trois types de caractères, sans votre identifiant). Si votre rôle impose le second facteur, ajoutez la clé affichée dans votre application d'authentification puis confirmez avec un code.
 5. Après 5 échecs, le compte est verrouillé 15 minutes. Une session inactive 30 minutes est fermée ; une session dure au plus 8 heures.
 
+### Langue de l'interface
+
+L'interface existe en français et en anglais. Choisissez la langue dans la liste en haut de l'écran de connexion, ou à tout moment avec le bouton « English » (ou « Français ») du bandeau supérieur, sans vous reconnecter. Votre choix est mémorisé sur le poste. Les documents PDF et le journal d'audit restent en français. Détails : [traduction.md](traduction.md).
+
 ## 2. Écran principal
 
-Le bandeau supérieur rappelle votre identité, votre rôle et votre unité, et propose « Affichage sombre » (ou « Affichage clair ») et « Se déconnecter ». L'affichage clair est utilisé par défaut ; l'affichage sombre convient aux postes utilisés dans une pièce peu éclairée. Votre choix est mémorisé sur le poste. Hors production, les écrans présentant des chiffres portent la mention « Chiffres fictifs » et la barre d'état rappelle l'environnement utilisé. Le menu latéral donne accès aux modules :
+Le bandeau supérieur rappelle votre identité, votre rôle et votre unité, et propose « Affichage sombre » (ou « Affichage clair »), « English » (ou « Français ») et « Se déconnecter ». L'affichage clair est utilisé par défaut ; l'affichage sombre convient aux postes utilisés dans une pièce peu éclairée. Votre choix est mémorisé sur le poste. Hors production, les écrans présentant des chiffres portent la mention « Chiffres fictifs » et la barre d'état rappelle l'environnement utilisé. Le menu latéral donne accès aux modules :
 
 | Module | Usage |
 |---|---|

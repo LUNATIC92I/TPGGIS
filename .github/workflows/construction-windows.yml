@@ -21,7 +21,7 @@ jobs:
       - name: Dependances du client et tests de l'interface
         run: |
           pip install -r requirements-dev.txt
-          python -m pytest tests/client tests/unit
+          python -m pytest tests/client tests/unit tests/i18n
         env:
           # Affichage Windows reel (police Segoe UI et moteur de rendu du systeme) :
           # le mode offscreen ne reproduit pas les metriques de police de Windows.

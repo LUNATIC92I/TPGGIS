@@ -35,11 +35,12 @@ from tpgis.client.widgets.communs import (
 from tpgis.client.windows.base import Page
 from tpgis.client.windows.personnes import DialogueSelectionPersonne
 from tpgis.shared.geographie import provinces
+from tpgis.shared.i18n import tr
 
 COLONNES_PLAINTES = [
     ("numero", "Numéro", None),
     ("recue_le", "Reçue le", lambda v, _: fmt_date(v)),
-    ("categorie", "Type de plainte", None),
+    ("categorie", "Type de plainte", lambda v, _: tr(v) if v else ""),
     ("statut", "Statut", lambda v, _: L.libelle(L.STATUT_PLAINTE, v)),
     ("unite_nom", "Unité", None),
     ("agent_responsable", "Agent responsable", None),
@@ -56,29 +57,29 @@ class OngletPieces(QWidget):
         couche = QVBoxLayout(self)
         self.tableau = TableauDonnees(
             [
-                ("intitule", "Intitulé", None),
-                ("type_piece", "Type", lambda v, _: L.libelle(L.TYPE_PIECE, v)),
-                ("version_courante", "Version", None),
-                ("versions", "Fichier", lambda v, _: v[-1]["nom_fichier"] if v else ""),
+                ("intitule", tr("Intitulé"), None),
+                ("type_piece", tr("Type"), lambda v, _: L.libelle(L.TYPE_PIECE, v)),
+                ("version_courante", tr("Version"), None),
+                ("versions", tr("Fichier"), lambda v, _: v[-1]["nom_fichier"] if v else ""),
                 (
                     "versions",
-                    "Analyse antivirus",
+                    tr("Analyse antivirus"),
                     lambda v, _: L.libelle(L.STATUT_ANALYSE, v[-1]["statut_analyse"]) if v else "",
                 ),
-                ("versions", "Empreinte SHA-256", lambda v, _: v[-1]["sha256"][:16] + "…" if v else ""),
-                ("cree_le", "Déposée le", lambda v, _: fmt_date(v)),
+                ("versions", tr("Empreinte SHA-256"), lambda v, _: v[-1]["sha256"][:16] + "…" if v else ""),
+                ("cree_le", tr("Déposée le"), lambda v, _: fmt_date(v)),
             ],
             pagine=False,
         )
         couche.addWidget(self.tableau, 1)
         boutons = QHBoxLayout()
-        deposer = QPushButton("Déposer une pièce")
+        deposer = QPushButton(tr("Déposer une pièce"))
         deposer.setEnabled(session.a("document.ajouter"))
         deposer.clicked.connect(self.deposer)
-        version = QPushButton("Nouvelle version")
+        version = QPushButton(tr("Nouvelle version"))
         version.setEnabled(session.a("document.ajouter"))
         version.clicked.connect(self.nouvelle_version)
-        telecharger = QPushButton("Télécharger")
+        telecharger = QPushButton(tr("Télécharger"))
         telecharger.clicked.connect(self.telecharger)
         for b in (deposer, version, telecharger):
             boutons.addWidget(b)
@@ -95,23 +96,23 @@ class OngletPieces(QWidget):
     def _choisir_fichier(self) -> tuple[str, bytes] | None:
         chemin, _ = QFileDialog.getOpenFileName(
             self,
-            "Choisir une pièce",
+            tr("Choisir une pièce"),
             str(Path.home()),
-            "Documents (*.pdf *.png *.jpg *.jpeg *.tif *.tiff *.docx *.odt *.txt)",
+            tr("Documents (*.pdf *.png *.jpg *.jpeg *.tif *.tiff *.docx *.odt *.txt)"),
         )
         if not chemin:
             return None
         return Path(chemin).name, Path(chemin).read_bytes()
 
     def deposer(self) -> None:
-        formulaire = FormulaireDialogue("Déposer une pièce", self)
-        intitule = formulaire.ajouter("Intitulé", QLineEdit(), True)
-        type_piece = formulaire.ajouter("Type de pièce", Choix(L.TYPE_PIECE))
+        formulaire = FormulaireDialogue(tr("Déposer une pièce"), self)
+        intitule = formulaire.ajouter(tr("Intitulé"), QLineEdit(), True)
+        type_piece = formulaire.ajouter(tr("Type de pièce"), Choix(L.TYPE_PIECE))
 
         def _action():
             fichier = self._choisir_fichier()
             if not fichier:
-                raise ValueError("Aucun fichier sélectionné.")
+                raise ValueError(tr("Aucun fichier sélectionné."))
             resultat = self.session.api.deposer(
                 "/documents",
                 {"intitule": intitule.text(), "type_piece": type_piece.valeur(), self.cle: self.ident},
@@ -120,9 +121,11 @@ class OngletPieces(QWidget):
             if not resultat["disponible"]:
                 QMessageBox.warning(
                     self,
-                    "Pièce non disponible",
-                    "L'analyse antivirus n'a pas confirmé l'innocuité du fichier : "
-                    f"{resultat['versions'][-1]['resultat_analyse']}",
+                    tr("Pièce non disponible"),
+                    tr(
+                        "L'analyse antivirus n'a pas confirmé l'innocuité du fichier : {resultat_analyse}",
+                        resultat_analyse=resultat["versions"][-1]["resultat_analyse"],
+                    ),
                 )
             return resultat
 
@@ -149,53 +152,57 @@ class OngletPieces(QWidget):
         except ErreurAPI as exc:
             afficher_erreur(self, exc)
             return
-        destination, _ = QFileDialog.getSaveFileName(self, "Enregistrer la pièce", str(Path.home() / nom))
+        destination, _ = QFileDialog.getSaveFileName(self, tr("Enregistrer la pièce"), str(Path.home() / nom))
         if destination:
             Path(destination).write_bytes(contenu)
 
 
 class FormulairePlainte(FormulaireDialogue):
     def __init__(self, session, parent=None, existante: dict | None = None):
-        super().__init__("Modifier la plainte" if existante else "Enregistrer une plainte", parent, 680)
+        super().__init__(tr("Modifier la plainte") if existante else tr("Enregistrer une plainte"), parent, 680)
         self.session, self.existante = session, existante
         self.personnes: list[dict] = []
         if not existante:
-            self.recue_le = self.ajouter("Date et heure de réception", QDateTimeEdit(QDateTime.currentDateTime()))
+            self.recue_le = self.ajouter(tr("Date et heure de réception"), QDateTimeEdit(QDateTime.currentDateTime()))
             self.recue_le.setDisplayFormat("dd/MM/yyyy HH:mm")
             self.recue_le.setMaximumDateTime(QDateTime.currentDateTime())
             self.service = self.ajouter(
-                "Service d'enregistrement", QLineEdit(f"Accueil, {session.moi['unite_nom']}"), True
+                tr("Service d'enregistrement"),
+                QLineEdit(f"Accueil, {session.moi['unite_nom']}"),
+                True,
             )
             self.unite = self.ajouter(
-                "Unité concernée", Choix({u["id"]: u["nom"] for u in session.unites() if u["active"]})
+                tr("Unité concernée"), Choix({u["id"]: u["nom"] for u in session.unites() if u["active"]})
             )
             self.unite.choisir(session.moi["unite_id"])
         self.categorie = self.ajouter(
-            "Type de plainte", Choix({c["id"]: c["libelle"] for c in session.categories()}, "Non catégorisé")
+            tr("Type de plainte"), Choix({c["id"]: c["libelle"] for c in session.categories()}, tr("Non catégorisé"))
         )
-        self.description = self.ajouter("Description des faits allégués", QPlainTextEdit())
+        self.description = self.ajouter(tr("Description des faits allégués"), QPlainTextEdit())
         self.description.setMinimumHeight(110)
-        self.date_faits = self.ajouter("Date déclarée des faits", ChampDate())
-        self.lieu = self.ajouter("Lieu déclaré des faits", QLineEdit())
-        self.province = self.ajouter("Province des faits", Choix(provinces(), "Province de l'unité"))
-        self.references = self.ajouter("Procès-verbaux et références", QLineEdit())
-        self.temoins = self.ajouter("Témoins non identifiés", QPlainTextEdit())
+        self.date_faits = self.ajouter(tr("Date déclarée des faits"), ChampDate())
+        self.lieu = self.ajouter(tr("Lieu déclaré des faits"), QLineEdit())
+        self.province = self.ajouter(tr("Province des faits"), Choix(provinces(), tr("Province de l'unité")))
+        self.references = self.ajouter(tr("Procès-verbaux et références"), QLineEdit())
+        self.temoins = self.ajouter(tr("Témoins non identifiés"), QPlainTextEdit())
         self.temoins.setMaximumHeight(60)
-        self.observations = self.ajouter("Observations", QPlainTextEdit())
+        self.observations = self.ajouter(tr("Observations"), QPlainTextEdit())
         self.observations.setMaximumHeight(70)
         if not existante:
             ligne = QHBoxLayout()
-            self.resume_personnes = QLabel("Aucune personne associée")
-            ajouter = QPushButton("Associer une personne")
+            self.resume_personnes = QLabel(tr("Aucune personne associée"))
+            ajouter = QPushButton(tr("Associer une personne"))
             ajouter.clicked.connect(self._ajouter_personne)
             ligne.addWidget(self.resume_personnes, 1)
             ligne.addWidget(ajouter)
             conteneur = QWidget()
             conteneur.setLayout(ligne)
-            self.formulaire.addRow("Personnes concernées", conteneur)
+            self.formulaire.addRow(tr("Personnes concernées"), conteneur)
         rappel = QLabel(
-            "L'enregistrement d'une plainte rapporte des faits allégués : il ne désigne aucun auteur "
-            "reconnu d'une infraction."
+            tr(
+                "L'enregistrement d'une plainte rapporte des faits allégués : il ne désigne aucun auteur "
+                "reconnu d'une infraction."
+            )
         )
         rappel.setWordWrap(True)
         rappel.setObjectName("sousTitrePage")
@@ -218,7 +225,7 @@ class FormulairePlainte(FormulaireDialogue):
                 {
                     "personne_id": dialogue.personne["id"],
                     "role": dialogue.role_choisi(),
-                    "_nom": f"{dialogue.personne['nom']} {dialogue.personne.get('prenoms') or ''}",
+                    "_nom": tr("{nom} {v2}", nom=dialogue.personne["nom"], v2=dialogue.personne.get("prenoms") or ""),
                 }
             )
             self.resume_personnes.setText(
@@ -228,7 +235,7 @@ class FormulairePlainte(FormulaireDialogue):
     def _enregistrer(self):
         description = self.description.toPlainText().strip()
         if len(description) < 10:
-            raise ValueError("La description des faits doit comporter au moins 10 caractères.")
+            raise ValueError(tr("La description des faits doit comporter au moins 10 caractères."))
         donnees = {
             "categorie_id": self.categorie.valeur(),
             "description": description,
@@ -258,7 +265,7 @@ class DialoguePlainte(QDialog):
     def __init__(self, session, plainte_id: str, parent=None):
         super().__init__(parent)
         self.session, self.ident, self.api = session, plainte_id, session.api
-        self.setWindowTitle("Plainte")
+        self.setWindowTitle(tr("Plainte"))
         self.setMinimumSize(920, 600)
         self.couche = QVBoxLayout(self)
         self.titre = QLabel("")
@@ -267,20 +274,20 @@ class DialoguePlainte(QDialog):
         self.onglets = QTabWidget()
         self.couche.addWidget(self.onglets, 1)
         boutons = QHBoxLayout()
-        self.b_modifier = QPushButton("Modifier")
+        self.b_modifier = QPushButton(tr("Modifier"))
         self.b_modifier.clicked.connect(self.modifier)
-        self.b_statut = QPushButton("Changer le statut")
+        self.b_statut = QPushButton(tr("Changer le statut"))
         self.b_statut.clicked.connect(self.changer_statut)
-        self.b_personne = QPushButton("Associer une personne")
+        self.b_personne = QPushButton(tr("Associer une personne"))
         self.b_personne.clicked.connect(self.associer)
-        self.b_fiche = QPushButton("Fiche de plainte (PDF)")
+        self.b_fiche = QPushButton(tr("Fiche de plainte (PDF)"))
         self.b_fiche.clicked.connect(lambda: self.pdf("fiche.pdf"))
-        self.b_bordereau = QPushButton("Bordereau de transmission (PDF)")
+        self.b_bordereau = QPushButton(tr("Bordereau de transmission (PDF)"))
         self.b_bordereau.clicked.connect(lambda: self.pdf("bordereau.pdf"))
         for b in (self.b_modifier, self.b_statut, self.b_personne, self.b_fiche, self.b_bordereau):
             boutons.addWidget(b)
         boutons.addStretch()
-        fermer = QPushButton("Fermer")
+        fermer = QPushButton(tr("Fermer"))
         fermer.clicked.connect(self.accept)
         boutons.addWidget(fermer)
         self.couche.addLayout(boutons)
@@ -296,82 +303,85 @@ class DialoguePlainte(QDialog):
             afficher_erreur(self, exc)
             return
         p = self.p
-        self.titre.setText(f"Plainte {p['numero']}  |  {L.libelle(L.STATUT_PLAINTE, p['statut'])}")
+        self.titre.setText(
+            tr("Plainte {numero}  |  {libelle}", numero=p["numero"], libelle=L.libelle(L.STATUT_PLAINTE, p["statut"]))
+        )
         self.onglets.clear()
         infos = QWidget()
         f = QFormLayout(infos)
         for libelle, valeur in [
-            ("Reçue le", fmt_date(p["recue_le"])),
-            ("Service d'enregistrement", p["service_enregistrement"]),
-            ("Unité", p["unite_nom"]),
-            ("Agent responsable", p.get("agent_responsable")),
-            ("Type de plainte", p.get("categorie")),
-            ("Date déclarée des faits", fmt_date(p.get("date_faits"))),
-            ("Lieu déclaré", p.get("lieu_faits")),
-            ("Province", provinces().get(p.get("province_code") or "", "")),
-            ("Faits allégués", p["description"]),
-            ("Références de procédure", p.get("references_procedure")),
-            ("Témoins non identifiés", p.get("temoins_non_identifies")),
-            ("Observations", p.get("observations")),
-            ("Motif du dernier statut", p.get("motif_statut")),
-            ("Service destinataire", p.get("service_destinataire")),
+            (tr("Reçue le"), fmt_date(p["recue_le"])),
+            (tr("Service d'enregistrement"), p["service_enregistrement"]),
+            (tr("Unité"), p["unite_nom"]),
+            (tr("Agent responsable"), p.get("agent_responsable")),
+            (tr("Type de plainte"), tr(p.get("categorie"))),
+            (tr("Date déclarée des faits"), fmt_date(p.get("date_faits"))),
+            (tr("Lieu déclaré"), p.get("lieu_faits")),
+            (tr("Province"), provinces().get(p.get("province_code") or "", "")),
+            (tr("Faits allégués"), p["description"]),
+            (tr("Références de procédure"), p.get("references_procedure")),
+            (tr("Témoins non identifiés"), p.get("temoins_non_identifies")),
+            (tr("Observations"), p.get("observations")),
+            (tr("Motif du dernier statut"), p.get("motif_statut")),
+            (tr("Service destinataire"), p.get("service_destinataire")),
         ]:
             champ = QLabel(valeur or "")
             champ.setWordWrap(True)
             f.addRow(libelle, champ)
-        self.onglets.addTab(infos, "Informations")
+        self.onglets.addTab(infos, tr("Informations"))
         personnes = TableauDonnees(
             [
-                ("numero_interne", "N° interne", None),
-                ("nom", "Nom", None),
-                ("prenoms", "Prénoms", None),
-                ("role", "Rôle procédural", lambda v, _: L.libelle(L.ROLE_PERSONNE, v)),
+                ("numero_interne", tr("N° interne"), None),
+                ("nom", tr("Nom"), None),
+                ("prenoms", tr("Prénoms"), None),
+                ("role", tr("Rôle procédural"), lambda v, _: L.libelle(L.ROLE_PERSONNE, v)),
             ],
             pagine=False,
         )
         personnes.definir_lignes(p["personnes"])
-        self.onglets.addTab(personnes, f"Personnes ({len(p['personnes'])})")
+        self.onglets.addTab(personnes, tr("Personnes ({len})", len=len(p["personnes"])))
         liens = TableauDonnees(
-            [("type", "Type", None), ("reference", "Référence", None), ("statut", "Statut", None)], pagine=False
+            [("type", tr("Type"), None), ("reference", tr("Référence"), None), ("statut", tr("Statut"), None)],
+            pagine=False,
         )
         liens.definir_lignes(
-            [{"type": "Dossier", "reference": d["numero"], "statut": d["statut"]} for d in p["dossiers"]]
+            [{"type": tr("Dossier"), "reference": d["numero"], "statut": d["statut"]} for d in p["dossiers"]]
             + [
                 {
-                    "type": "Fait",
+                    "type": tr("Fait"),
                     "reference": x["reference"],
                     "statut": L.libelle(L.NATURE_INFORMATION, x["nature_information"]),
                 }
                 for x in p["faits"]
             ]
         )
-        self.onglets.addTab(liens, "Dossiers et faits liés")
+        self.onglets.addTab(liens, tr("Dossiers et faits liés"))
         if self.session.a("document.lire"):
-            self.onglets.addTab(OngletPieces(self.session, "plainte_id", self.ident, self), "Pièces")
+            self.onglets.addTab(OngletPieces(self.session, "plainte_id", self.ident, self), tr("Pièces"))
         historique = TableauDonnees(
             [
-                ("modifie_le", "Date", lambda v, _: fmt_date(v)),
-                ("modifie_par", "Par", None),
-                ("action", "Action", None),
-                ("changements", "Détails", lambda v, _: str(v or "")),
+                ("modifie_le", tr("Date"), lambda v, _: fmt_date(v)),
+                ("modifie_par", tr("Par"), None),
+                ("action", tr("Action"), None),
+                ("changements", tr("Détails"), lambda v, _: str(v or "")),
             ],
             pagine=False,
         )
         historique.definir_lignes(p["historique"])
-        self.onglets.addTab(historique, "Historique des modifications")
+        self.onglets.addTab(historique, tr("Historique des modifications"))
 
     def modifier(self) -> None:
         if FormulairePlainte(self.session, self, self.p).exec() == QDialog.Accepted:
             self.recharger()
 
     def changer_statut(self) -> None:
-        formulaire = FormulaireDialogue("Changer le statut", self)
+        formulaire = FormulaireDialogue(tr("Changer le statut"), self)
         statut = formulaire.ajouter(
-            "Nouveau statut", Choix({s: L.libelle(L.STATUT_PLAINTE, s) for s in self.p["transitions_possibles"]})
+            tr("Nouveau statut"), Choix({s: L.libelle(L.STATUT_PLAINTE, s) for s in self.p["transitions_possibles"]})
         )
-        motif = formulaire.ajouter("Motif", QPlainTextEdit())
-        destinataire = formulaire.ajouter("Service destinataire (transmission)", QLineEdit())
-        note = QLabel("La clôture, l'archivage et la réouverture exigent un motif et une habilitation spécifique.")
+        motif = formulaire.ajouter(tr("Motif"), QPlainTextEdit())
+        destinataire = formulaire.ajouter(tr("Service destinataire (transmission)"), QLineEdit())
+        note = QLabel(tr("La clôture, l'archivage et la réouverture exigent un motif et une habilitation spécifique."))
         note.setObjectName("sousTitrePage")
         note.setWordWrap(True)
         formulaire.formulaire.addRow(note)
@@ -406,7 +416,7 @@ class DialoguePlainte(QDialog):
             afficher_erreur(self, exc)
             return
         destination, _ = QFileDialog.getSaveFileName(
-            self, "Enregistrer le document", str(Path.home() / fichier), "PDF (*.pdf)"
+            self, tr("Enregistrer le document"), str(Path.home() / fichier), tr("PDF (*.pdf)")
         )
         if destination:
             Path(destination).write_bytes(contenu)
@@ -420,15 +430,15 @@ class PagePlaintes(Page):
         super().__init__(session, parent)
         filtres = QHBoxLayout()
         self.numero = QLineEdit()
-        self.numero.setPlaceholderText("Numéro de plainte")
+        self.numero.setPlaceholderText(tr("Numéro de plainte"))
         self.numero.setMinimumWidth(190)
         self.numero.returnPressed.connect(lambda: self.charger(1))
-        self.statut = Choix(L.STATUT_PLAINTE, "Tous les statuts")
-        self.categorie = Choix({}, "Toutes les catégories")
-        self.du, self.au = ChampDate("Du"), ChampDate("Au")
-        rechercher = QPushButton("Filtrer")
+        self.statut = Choix(L.STATUT_PLAINTE, tr("Tous les statuts"))
+        self.categorie = Choix({}, tr("Toutes les catégories"))
+        self.du, self.au = ChampDate(tr("Du")), ChampDate(tr("Au"))
+        rechercher = QPushButton(tr("Filtrer"))
         rechercher.clicked.connect(lambda: self.charger(1))
-        nouvelle = QPushButton("Nouvelle plainte")
+        nouvelle = QPushButton(tr("Nouvelle plainte"))
         nouvelle.setObjectName("boutonPrincipal")
         nouvelle.setEnabled(session.a("plainte.creer"))
         nouvelle.clicked.connect(self.creer)
@@ -453,7 +463,7 @@ class PagePlaintes(Page):
         if self.categorie.count() == 1:
             try:
                 self.categorie.remplir(
-                    {c["id"]: c["libelle"] for c in self.session.categories()}, "Toutes les catégories"
+                    {c["id"]: c["libelle"] for c in self.session.categories()}, tr("Toutes les catégories")
                 )
             except ErreurAPI:
                 pass
@@ -472,7 +482,9 @@ class PagePlaintes(Page):
         formulaire = FormulairePlainte(self.session, self)
         if formulaire.exec() == QDialog.Accepted and formulaire.resultat:
             QMessageBox.information(
-                self, "Plainte enregistrée", f"Plainte enregistrée sous le numéro {formulaire.resultat['numero']}."
+                self,
+                tr("Plainte enregistrée"),
+                tr("Plainte enregistrée sous le numéro {numero}.", numero=formulaire.resultat["numero"]),
             )
             self.charger(1)
 

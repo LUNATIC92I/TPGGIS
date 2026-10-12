@@ -20,6 +20,9 @@ attribution =
 ; Theme de l'interface : clair (par defaut) ou sombre. L'utilisateur peut
 ; aussi basculer depuis le bandeau superieur ; son choix est memorise sur le poste.
 theme = clair
+; Langue de l'interface : fr (par defaut) ou en. L'utilisateur peut aussi la
+; choisir sur l'ecran de connexion ou depuis le bandeau superieur.
+langue = fr
 
 [identite]
 ; Nom et logo du logiciel affiches dans le bandeau, l'ecran de connexion et

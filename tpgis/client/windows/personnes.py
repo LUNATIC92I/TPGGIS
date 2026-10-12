@@ -30,6 +30,7 @@ from tpgis.client.widgets.communs import (
     texte_ou_none,
 )
 from tpgis.client.windows.base import Page
+from tpgis.shared.i18n import tr
 
 COLONNES_PERSONNES = [
     ("numero_interne", "N° interne", None),
@@ -45,7 +46,9 @@ COLONNES_CANDIDATS = [
     (
         "niveau",
         "Correspondance",
-        lambda v, ligne: f"{L.libelle(L.NIVEAU_CORRESPONDANCE, v)} ({ligne.get('score', '')})",
+        lambda v, ligne: tr(
+            "{libelle} ({get})", libelle=L.libelle(L.NIVEAU_CORRESPONDANCE, v), get=ligne.get("score", "")
+        ),
     ),
     ("numero_interne", "N° interne", None),
     ("nom", "Nom", None),
@@ -63,14 +66,16 @@ class DialogueDoublons(QDialog):
 
     def __init__(self, candidats: list[dict], parent=None, creation: bool = True):
         super().__init__(parent)
-        self.setWindowTitle("Fiches potentiellement identiques")
+        self.setWindowTitle(tr("Fiches potentiellement identiques"))
         self.setMinimumSize(860, 360)
         self.choix: dict | None = None
         couche = QVBoxLayout(self)
         avertissement = QLabel(
-            "Le système a détecté des fiches proches. Une concordance de nom ne suffit pas à "
-            "établir l'identité : vérifiez les pièces avant toute décision. Aucune fiche n'est "
-            "fusionnée automatiquement."
+            tr(
+                "Le système a détecté des fiches proches. Une concordance de nom ne suffit pas à "
+                "établir l'identité : vérifiez les pièces avant toute décision. Aucune fiche n'est "
+                "fusionnée automatiquement."
+            )
         )
         avertissement.setObjectName("avertissement")
         avertissement.setWordWrap(True)
@@ -80,13 +85,13 @@ class DialogueDoublons(QDialog):
         couche.addWidget(self.tableau, 1)
         boutons = QHBoxLayout()
         boutons.addStretch()
-        fermer = QPushButton("Fermer" if not creation else "Annuler")
+        fermer = QPushButton(tr("Fermer") if not creation else tr("Annuler"))
         fermer.clicked.connect(self.reject)
         boutons.addWidget(fermer)
         if creation:
-            utiliser = QPushButton("Utiliser la fiche sélectionnée")
+            utiliser = QPushButton(tr("Utiliser la fiche sélectionnée"))
             utiliser.clicked.connect(self._utiliser)
-            creer = QPushButton("Créer une nouvelle fiche malgré tout")
+            creer = QPushButton(tr("Créer une nouvelle fiche malgré tout"))
             creer.setObjectName("boutonPrincipal")
             creer.clicked.connect(lambda: self.done(self.CREER))
             boutons.addWidget(utiliser)
@@ -101,27 +106,27 @@ class DialogueDoublons(QDialog):
 
 class FormulairePersonne(FormulaireDialogue):
     def __init__(self, session, parent=None, existante: dict | None = None):
-        super().__init__("Modifier la fiche" if existante else "Nouvelle personne", parent)
+        super().__init__(tr("Modifier la fiche") if existante else tr("Nouvelle personne"), parent)
         self.session, self.existante = session, existante
         avis = QLabel(
-            "Les informations inconnues peuvent rester vides. Ne saisir que les données nécessaires à la procédure."
+            tr("Les informations inconnues peuvent rester vides. Ne saisir que les données nécessaires à la procédure.")
         )
         avis.setWordWrap(True)
         avis.setObjectName("sousTitrePage")
         self.formulaire.addRow(avis)
-        self.nom = self.ajouter("Nom", QLineEdit(), True)
-        self.prenoms = self.ajouter("Prénoms", QLineEdit())
-        self.naissance = self.ajouter("Date de naissance", ChampDate())
-        self.lieu = self.ajouter("Lieu de naissance", QLineEdit())
-        self.nationalite = self.ajouter("Nationalité déclarée", QLineEdit())
-        self.sexe = self.ajouter("Sexe (si justifié)", Choix(L.SEXE, "Non collecté"))
-        self.alias = self.ajouter("Alias documentés", QLineEdit())
-        self.alias.setPlaceholderText("séparés par des virgules")
-        self.telephone = self.ajouter("Téléphone", QLineEdit())
-        self.adresse = self.ajouter("Adresse", QLineEdit())
-        self.type_document = self.ajouter("Type de document", Choix(L.TYPE_DOCUMENT_IDENTITE, "Aucun"))
-        self.numero_document = self.ajouter("Référence du document", QLineEdit())
-        self.verification = self.ajouter("Vérification de l'identité", Choix(L.VERIFICATION_IDENTITE))
+        self.nom = self.ajouter(tr("Nom"), QLineEdit(), True)
+        self.prenoms = self.ajouter(tr("Prénoms"), QLineEdit())
+        self.naissance = self.ajouter(tr("Date de naissance"), ChampDate())
+        self.lieu = self.ajouter(tr("Lieu de naissance"), QLineEdit())
+        self.nationalite = self.ajouter(tr("Nationalité déclarée"), QLineEdit())
+        self.sexe = self.ajouter(tr("Sexe (si justifié)"), Choix(L.SEXE, tr("Non collecté")))
+        self.alias = self.ajouter(tr("Alias documentés"), QLineEdit())
+        self.alias.setPlaceholderText(tr("séparés par des virgules"))
+        self.telephone = self.ajouter(tr("Téléphone"), QLineEdit())
+        self.adresse = self.ajouter(tr("Adresse"), QLineEdit())
+        self.type_document = self.ajouter(tr("Type de document"), Choix(L.TYPE_DOCUMENT_IDENTITE, tr("Aucun")))
+        self.numero_document = self.ajouter(tr("Référence du document"), QLineEdit())
+        self.verification = self.ajouter(tr("Vérification de l'identité"), Choix(L.VERIFICATION_IDENTITE))
         if existante:
             self.nom.setText(existante["nom"])
             self.prenoms.setText(existante.get("prenoms") or "")
@@ -139,7 +144,7 @@ class FormulairePersonne(FormulaireDialogue):
 
     def donnees(self) -> dict:
         if not self.nom.text().strip():
-            raise ValueError("Le nom est obligatoire.")
+            raise ValueError(tr("Le nom est obligatoire."))
         alias = [a.strip() for a in self.alias.text().split(",") if a.strip()]
         coordonnees = {"telephone": texte_ou_none(self.telephone), "adresse": texte_ou_none(self.adresse)}
         return {
@@ -172,7 +177,7 @@ class FormulairePersonne(FormulaireDialogue):
                 return dialogue.choix
             if decision == DialogueDoublons.CREER:
                 return api.post("/personnes", {**donnees, "confirmer_malgre_doublons": True})
-            raise ValueError("Création annulée : vérifiez les fiches existantes.") from None
+            raise ValueError(tr("Création annulée : vérifiez les fiches existantes.")) from None
 
 
 class DialogueSelectionPersonne(QDialog):
@@ -181,17 +186,17 @@ class DialogueSelectionPersonne(QDialog):
     def __init__(self, session, parent=None, avec_role: bool = True):
         super().__init__(parent)
         self.session = session
-        self.setWindowTitle("Associer une personne")
+        self.setWindowTitle(tr("Associer une personne"))
         self.setMinimumSize(760, 440)
         self.personne: dict | None = None
         couche = QVBoxLayout(self)
         recherche = QHBoxLayout()
         self.texte = QLineEdit()
-        self.texte.setPlaceholderText("Nom ou numéro interne")
+        self.texte.setPlaceholderText(tr("Nom ou numéro interne"))
         self.texte.returnPressed.connect(self.chercher)
-        bouton = QPushButton("Rechercher")
+        bouton = QPushButton(tr("Rechercher"))
         bouton.clicked.connect(self.chercher)
-        nouvelle = QPushButton("Nouvelle personne")
+        nouvelle = QPushButton(tr("Nouvelle personne"))
         nouvelle.clicked.connect(self.creer)
         nouvelle.setEnabled(session.a("personne.creer"))
         recherche.addWidget(self.texte, 1)
@@ -204,16 +209,19 @@ class DialogueSelectionPersonne(QDialog):
         formulaire = QFormLayout()
         self.role = Choix(L.ROLE_PERSONNE)
         if avec_role:
-            formulaire.addRow("Rôle procédural", self.role)
+            formulaire.addRow(tr("Rôle procédural"), self.role)
             note = QLabel(
-                "Rappel : une personne mise en cause est présumée innocente. Le rôle ne vaut pas qualification pénale."
+                tr(
+                    "Rappel : une personne mise en cause est présumée innocente. Le rôle ne vaut pas "
+                    "qualification pénale."
+                )
             )
             note.setObjectName("sousTitrePage")
             formulaire.addRow(note)
         couche.addLayout(formulaire)
         boutons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        boutons.button(QDialogButtonBox.Ok).setText("Associer")
-        boutons.button(QDialogButtonBox.Cancel).setText("Annuler")
+        boutons.button(QDialogButtonBox.Ok).setText(tr("Associer"))
+        boutons.button(QDialogButtonBox.Cancel).setText(tr("Annuler"))
         boutons.accepted.connect(self.valider)
         boutons.rejected.connect(self.reject)
         couche.addWidget(boutons)
@@ -246,7 +254,7 @@ class DialogueFichePersonne(QDialog):
         super().__init__(parent)
         self.session, self.personne_id, self.finalite = session, personne_id, finalite
         self.api = session.api
-        self.setWindowTitle("Fiche personne")
+        self.setWindowTitle(tr("Fiche personne"))
         self.setMinimumSize(880, 560)
         self.couche = QVBoxLayout(self)
         self.entete = QLabel("")
@@ -258,12 +266,12 @@ class DialogueFichePersonne(QDialog):
         self.onglets = QTabWidget()
         self.couche.addWidget(self.onglets, 1)
         boutons = QHBoxLayout()
-        self.modifier = QPushButton("Modifier la fiche")
+        self.modifier = QPushButton(tr("Modifier la fiche"))
         self.modifier.clicked.connect(self._modifier)
         self.modifier.setEnabled(session.a("personne.modifier"))
         boutons.addWidget(self.modifier)
         boutons.addStretch()
-        fermer = QPushButton("Fermer")
+        fermer = QPushButton(tr("Fermer"))
         fermer.clicked.connect(self.accept)
         boutons.addWidget(fermer)
         self.couche.addLayout(boutons)
@@ -277,58 +285,71 @@ class DialogueFichePersonne(QDialog):
             self.fiche = None
             return
         f = self.fiche
-        self.entete.setText(f"{f['nom']} {f.get('prenoms') or ''}  ({f['numero_interne']})")
-        self.trace.setText(f"Consultation journalisée. Finalité : {self.finalite}. Trace : {f['trace_audit']}")
+        self.entete.setText(
+            tr(
+                "{nom} {v2}  ({numero_interne})",
+                nom=f["nom"],
+                v2=f.get("prenoms") or "",
+                numero_interne=f["numero_interne"],
+            )
+        )
+        self.trace.setText(
+            tr(
+                "Consultation journalisée. Finalité : {finalite}. Trace : {trace_audit}",
+                finalite=self.finalite,
+                trace_audit=f["trace_audit"],
+            )
+        )
         self.onglets.clear()
         identite = QWidget()
         formulaire = QFormLayout(identite)
         coord = f.get("coordonnees") or {}
         for libelle, valeur in [
-            ("Nom", f["nom"]),
-            ("Prénoms", f.get("prenoms")),
-            ("Date de naissance", fmt_date(f.get("date_naissance"))),
-            ("Lieu de naissance", f.get("lieu_naissance")),
-            ("Nationalité déclarée", f.get("nationalite")),
-            ("Sexe", L.libelle(L.SEXE, f.get("sexe"))),
-            ("Alias", ", ".join(f.get("alias") or [])),
-            ("Téléphone", coord.get("telephone")),
-            ("Adresse", coord.get("adresse")),
-            ("Document", L.libelle(L.TYPE_DOCUMENT_IDENTITE, f.get("type_document"))),
-            ("Référence du document", f.get("numero_document")),
-            ("Vérification de l'identité", L.libelle(L.VERIFICATION_IDENTITE, f.get("statut_verification"))),
-            ("Unité d'enregistrement", f.get("unite_creation")),
-            ("Statut de la fiche", f.get("statut")),
-            ("Créée le", fmt_date(f.get("cree_le"))),
-            ("Modifiée le", fmt_date(f.get("modifie_le"))),
+            (tr("Nom"), f["nom"]),
+            (tr("Prénoms"), f.get("prenoms")),
+            (tr("Date de naissance"), fmt_date(f.get("date_naissance"))),
+            (tr("Lieu de naissance"), f.get("lieu_naissance")),
+            (tr("Nationalité déclarée"), f.get("nationalite")),
+            (tr("Sexe"), L.libelle(L.SEXE, f.get("sexe"))),
+            (tr("Alias"), ", ".join(f.get("alias") or [])),
+            (tr("Téléphone"), coord.get("telephone")),
+            (tr("Adresse"), coord.get("adresse")),
+            (tr("Document"), L.libelle(L.TYPE_DOCUMENT_IDENTITE, f.get("type_document"))),
+            (tr("Référence du document"), f.get("numero_document")),
+            (tr("Vérification de l'identité"), L.libelle(L.VERIFICATION_IDENTITE, f.get("statut_verification"))),
+            (tr("Unité d'enregistrement"), f.get("unite_creation")),
+            (tr("Statut de la fiche"), f.get("statut")),
+            (tr("Créée le"), fmt_date(f.get("cree_le"))),
+            (tr("Modifiée le"), fmt_date(f.get("modifie_le"))),
         ]:
-            champ = QLabel(valeur or "Non renseigné")
+            champ = QLabel(valeur or tr("Non renseigné"))
             champ.setWordWrap(True)
             formulaire.addRow(libelle, champ)
-        self.onglets.addTab(identite, "Identité")
+        self.onglets.addTab(identite, tr("Identité"))
         liens = TableauDonnees(
             [
-                ("type", "Type", None),
-                ("reference", "Référence", None),
-                ("role", "Rôle", lambda v, _: L.libelle(L.ROLE_PERSONNE, v)),
-                ("statut", "Statut", None),
+                ("type", tr("Type"), None),
+                ("reference", tr("Référence"), None),
+                ("role", tr("Rôle"), lambda v, _: L.libelle(L.ROLE_PERSONNE, v)),
+                ("statut", tr("Statut"), None),
             ],
             pagine=False,
         )
         liens.definir_lignes(f["liens"])
-        self.onglets.addTab(liens, f"Dossiers liés ({len(f['liens'])})")
+        self.onglets.addTab(liens, tr("Dossiers liés ({len})", len=len(f["liens"])))
         if self.session.a("biometrie.lire"):
-            self.onglets.addTab(OngletBiometrie(self.session, self.personne_id, self.finalite, self), "Biométrie")
+            self.onglets.addTab(OngletBiometrie(self.session, self.personne_id, self.finalite, self), tr("Biométrie"))
         historique = TableauDonnees(
             [
-                ("modifie_le", "Date", lambda v, _: fmt_date(v)),
-                ("modifie_par", "Par", None),
-                ("action", "Action", None),
-                ("changements", "Détails", lambda v, _: str(v or "")),
+                ("modifie_le", tr("Date"), lambda v, _: fmt_date(v)),
+                ("modifie_par", tr("Par"), None),
+                ("action", tr("Action"), None),
+                ("changements", tr("Détails"), lambda v, _: str(v or "")),
             ],
             pagine=False,
         )
         historique.definir_lignes(f["historique"])
-        self.onglets.addTab(historique, "Historique")
+        self.onglets.addTab(historique, tr("Historique"))
 
     def _modifier(self) -> None:
         if self.fiche and FormulairePersonne(self.session, self, self.fiche).exec() == QDialog.Accepted:
@@ -343,35 +364,37 @@ class OngletBiometrie(QWidget):
         self.session, self.personne_id, self.finalite = session, personne_id, finalite
         couche = QVBoxLayout(self)
         avis = QLabel(
-            "Module biométrique en mode SIMULATION : aucune empreinte réelle n'est capturée ni comparée. "
-            "Seules des vérifications une à une sont possibles ; la recherche biométrique est désactivée."
+            tr(
+                "Module biométrique en mode SIMULATION : aucune empreinte réelle n'est capturée ni comparée. "
+                "Seules des vérifications une à une sont possibles ; la recherche biométrique est désactivée."
+            )
         )
         avis.setObjectName("avertissement")
         avis.setWordWrap(True)
         couche.addWidget(avis)
         self.tableau = TableauDonnees(
             [
-                ("position_doigt", "Doigt", None),
-                ("collectee_le", "Collectée le", lambda v, _: fmt_date(v)),
-                ("equipement", "Équipement", None),
-                ("fondement_legal", "Fondement juridique", None),
-                ("consentement_recueilli", "Consentement", None),
-                ("qualite", "Qualité", None),
-                ("conserver_jusqua", "Conservation jusqu'au", lambda v, _: fmt_date(v)),
-                ("statut", "Statut", None),
-                ("est_synthetique", "Synthétique", None),
+                ("position_doigt", tr("Doigt"), None),
+                ("collectee_le", tr("Collectée le"), lambda v, _: fmt_date(v)),
+                ("equipement", tr("Équipement"), None),
+                ("fondement_legal", tr("Fondement juridique"), None),
+                ("consentement_recueilli", tr("Consentement"), None),
+                ("qualite", tr("Qualité"), None),
+                ("conserver_jusqua", tr("Conservation jusqu'au"), lambda v, _: fmt_date(v)),
+                ("statut", tr("Statut"), None),
+                ("est_synthetique", tr("Synthétique"), None),
             ],
             pagine=False,
         )
         couche.addWidget(self.tableau, 1)
         boutons = QHBoxLayout()
-        enregistrer = QPushButton("Enregistrer une capture (simulée)")
+        enregistrer = QPushButton(tr("Enregistrer une capture (simulée)"))
         enregistrer.setEnabled(session.a("biometrie.enregistrer"))
         enregistrer.clicked.connect(self.enregistrer)
-        verifier = QPushButton("Vérification une à une")
+        verifier = QPushButton(tr("Vérification une à une"))
         verifier.setEnabled(session.a("biometrie.verifier"))
         verifier.clicked.connect(self.verifier)
-        supprimer = QPushButton("Demander la suppression")
+        supprimer = QPushButton(tr("Demander la suppression"))
         supprimer.setObjectName("boutonDanger")
         supprimer.setEnabled(session.a("biometrie.supprimer"))
         supprimer.clicked.connect(self.supprimer)
@@ -390,11 +413,11 @@ class OngletBiometrie(QWidget):
             afficher_erreur(self, exc)
 
     def enregistrer(self) -> None:
-        formulaire = FormulaireDialogue("Capture biométrique (simulation)", self)
-        doigt = formulaire.ajouter("Doigt", Choix({d: d.replace("_", " ").capitalize() for d in L.DOIGTS}), True)
-        equipement = formulaire.ajouter("Équipement", QLineEdit("Capteur simulé (aucun matériel)"), True)
-        fondement = formulaire.ajouter("Fondement juridique", QLineEdit(), True)
-        consentement = formulaire.ajouter("Consentement recueilli", Choix({True: "Oui", False: "Non"}))
+        formulaire = FormulaireDialogue(tr("Capture biométrique (simulation)"), self)
+        doigt = formulaire.ajouter(tr("Doigt"), Choix({d: d.replace("_", " ").capitalize() for d in L.DOIGTS}), True)
+        equipement = formulaire.ajouter(tr("Équipement"), QLineEdit(tr("Capteur simulé (aucun matériel)")), True)
+        fondement = formulaire.ajouter(tr("Fondement juridique"), QLineEdit(), True)
+        consentement = formulaire.ajouter(tr("Consentement recueilli"), Choix({True: tr("Oui"), False: tr("Non")}))
         formulaire.action = lambda: self.session.api.post(
             "/biometrie/captures",
             {
@@ -416,7 +439,7 @@ class OngletBiometrie(QWidget):
         try:
             r = self.session.api.post(
                 "/biometrie/verifications",
-                {"capture_id": capture["id"], "equipement": "Capteur simulé"},
+                {"capture_id": capture["id"], "equipement": tr("Capteur simulé")},
                 finalite=self.finalite,
             )
         except ErreurAPI as exc:
@@ -424,23 +447,32 @@ class OngletBiometrie(QWidget):
             return
         QMessageBox.information(
             self,
-            "Résultat de vérification",
-            f"Concordance : {'oui' if r['concordance'] else 'non'} (score {r['score']})\n\n"
-            f"{r['commentaire']}\n\nTrace d'audit : {r['trace_audit']}",
+            tr("Résultat de vérification"),
+            tr(
+                "Concordance : {v1} (score {score})\n\n{commentaire}\n\nTrace d'audit : {trace_audit}",
+                v1="oui" if r["concordance"] else "non",
+                score=r["score"],
+                commentaire=r["commentaire"],
+                trace_audit=r["trace_audit"],
+            ),
         )
 
     def supprimer(self) -> None:
         capture = self.tableau.selection()
         if not capture:
             return
-        motif = demander_motif(self, "Suppression d'une capture", "Motif de la demande (soumise à double validation) :")
+        motif = demander_motif(
+            self, tr("Suppression d'une capture"), tr("Motif de la demande (soumise à double validation) :")
+        )
         if motif:
             try:
                 self.session.api.post(
                     f"/biometrie/captures/{capture['id']}/suppression", {"motif": motif}, finalite=self.finalite
                 )
                 QMessageBox.information(
-                    self, "Demande enregistrée", "La demande sera exécutée après validation par un second responsable."
+                    self,
+                    tr("Demande enregistrée"),
+                    tr("La demande sera exécutée après validation par un second responsable."),
                 )
             except ErreurAPI as exc:
                 afficher_erreur(self, exc)
@@ -457,19 +489,19 @@ class PagePersonnes(Page):
         super().__init__(session, parent)
         barre = QHBoxLayout()
         self.texte = QLineEdit()
-        self.texte.setPlaceholderText("Nom, prénoms ou numéro interne")
+        self.texte.setPlaceholderText(tr("Nom, prénoms ou numéro interne"))
         self.texte.returnPressed.connect(lambda: self.charger(1))
-        chercher = QPushButton("Rechercher")
+        chercher = QPushButton(tr("Rechercher"))
         chercher.clicked.connect(lambda: self.charger(1))
-        nouvelle = QPushButton("Nouvelle personne")
+        nouvelle = QPushButton(tr("Nouvelle personne"))
         nouvelle.setObjectName("boutonPrincipal")
         nouvelle.setEnabled(session.a("personne.creer"))
         nouvelle.clicked.connect(self.creer)
-        ouvrir = QPushButton("Ouvrir la fiche")
+        ouvrir = QPushButton(tr("Ouvrir la fiche"))
         ouvrir.clicked.connect(lambda: self.ouvrir(self.tableau.selection()))
-        doublons = QPushButton("Rechercher des doublons")
+        doublons = QPushButton(tr("Rechercher des doublons"))
         doublons.clicked.connect(self.doublons)
-        fusion = QPushButton("Demander une fusion")
+        fusion = QPushButton(tr("Demander une fusion"))
         fusion.setEnabled(session.a("personne.fusionner"))
         fusion.clicked.connect(self.fusion)
         barre.addWidget(self.texte, 1)
@@ -504,7 +536,7 @@ class PagePersonnes(Page):
     def doublons(self) -> None:
         p = self.tableau.selection()
         if not p:
-            QMessageBox.information(self, "Doublons", "Sélectionnez d'abord une fiche.")
+            QMessageBox.information(self, tr("Doublons"), tr("Sélectionnez d'abord une fiche."))
             return
         candidats = self.appel_direct(
             lambda: self.api.post(
@@ -524,25 +556,31 @@ class PagePersonnes(Page):
     def fusion(self) -> None:
         conservee = self.tableau.selection()
         if not conservee:
-            QMessageBox.information(self, "Fusion", "Sélectionnez la fiche à conserver.")
+            QMessageBox.information(self, tr("Fusion"), tr("Sélectionnez la fiche à conserver."))
             return
         selection = DialogueSelectionPersonne(self.session, self, avec_role=False)
-        selection.setWindowTitle("Fiche à absorber dans la fiche sélectionnée")
+        selection.setWindowTitle(tr("Fiche à absorber dans la fiche sélectionnée"))
         if selection.exec() != QDialog.Accepted or not selection.personne:
             return
         absorbee = selection.personne
         if not confirmer(
             self,
-            "Demande de fusion",
-            f"Fusionner {absorbee['numero_interne']} dans {conservee['numero_interne']} ?\n"
-            "La fusion ne sera exécutée qu'après validation par un second responsable.",
+            tr("Demande de fusion"),
+            tr(
+                "Fusionner {numero_interne} dans {numero_interne2} ?\nLa fusion ne sera exécutée "
+                "qu'après validation par un second responsable.",
+                numero_interne=absorbee["numero_interne"],
+                numero_interne2=conservee["numero_interne"],
+            ),
         ):
             return
-        motif = demander_motif(self, "Motif de la fusion", "Justifiez la fusion (vérification sur pièces) :")
+        motif = demander_motif(self, tr("Motif de la fusion"), tr("Justifiez la fusion (vérification sur pièces) :"))
         if motif and self.appel_direct(
             lambda: self.api.post(
                 "/personnes/fusions",
                 {"personne_conservee_id": conservee["id"], "personne_absorbee_id": absorbee["id"], "motif": motif},
             )
         ):
-            QMessageBox.information(self, "Demande enregistrée", "Demande de fusion soumise à double validation.")
+            QMessageBox.information(
+                self, tr("Demande enregistrée"), tr("Demande de fusion soumise à double validation.")
+            )

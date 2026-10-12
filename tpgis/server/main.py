@@ -30,6 +30,7 @@ from tpgis.server.middleware.securite import LimiteurDebit, installer
 from tpgis.server.security import crypto
 from tpgis.server.services import audit
 from tpgis.server.services.erreurs import AccesRefuse, ErreurMetier
+from tpgis.shared.i18n import normaliser, traduire
 
 journal = logging.getLogger("tpgis")
 PREFIXE = "/api/v1"
@@ -51,7 +52,12 @@ def initialiser_chiffrement(p: ParametresServeur) -> None:
     )
 
 
-def _reponse_erreur(request: Request, statut: int, message: str, code: str, details: dict | None = None):
+def _reponse_erreur(request: Request, statut: int, message: str | ErreurMetier, code: str, details: dict | None = None):
+    """Reponse d'erreur ; le message (modele francais) est traduit selon l'en tete Accept-Language."""
+    if not isinstance(message, ErreurMetier):
+        message = traduire(message, normaliser(request.headers.get("accept-language")))
+    else:
+        message = message.message_traduit(normaliser(request.headers.get("accept-language")))
     contenu = {"detail": message, "code": code, "trace_id": getattr(request.state, "trace_id", None)}
     if details:
         contenu["details"] = details
@@ -124,7 +130,7 @@ def creer_application(p: ParametresServeur | None = None, *, migrer_au_demarrage
     async def _erreur_metier(request: Request, exc: ErreurMetier):
         if isinstance(exc, AccesRefuse):
             _tracer_refus(request, exc)
-        return _reponse_erreur(request, exc.statut_http, exc.message, exc.code, exc.details)
+        return _reponse_erreur(request, exc.statut_http, exc, exc.code, exc.details)
 
     @app.exception_handler(RequestValidationError)
     async def _erreur_validation(request: Request, exc: RequestValidationError):

@@ -94,7 +94,9 @@ def verifier_signature(donnees: bytes, extension: str) -> None:
         return
     attendues = signatures.get(extension)
     if attendues is None:
-        raise DonneesInvalides(f"Aucun contrôle de signature défini pour l'extension .{extension}.")
+        raise DonneesInvalides(
+            "Aucun contrôle de signature défini pour l'extension .{extension}.", parametres={"extension": extension}
+        )
     if not any(donnees.startswith(s) for s in attendues):
         raise DonneesInvalides("Le contenu du fichier ne correspond pas à son extension.")
     if extension in ("docx", "odt"):
@@ -106,12 +108,16 @@ def valider_fichier(bd: SessionBD, nom_fichier: str, donnees: bytes) -> tuple[st
     extension = nom.rsplit(".", 1)[-1].lower() if "." in nom else ""
     autorisees = [e.lower() for e in lire_parametre(bd, "documents.extensions_autorisees")]
     if extension not in autorisees or extension not in TYPES_MIME:
-        raise DonneesInvalides(f"Format non autorisé. Formats acceptés : {', '.join(autorisees)}.")
+        raise DonneesInvalides(
+            "Format non autorisé. Formats acceptés : {formats}.", parametres={"formats": ", ".join(autorisees)}
+        )
     taille_max = int(lire_parametre(bd, "documents.taille_max_octets"))
     if len(donnees) == 0:
         raise DonneesInvalides("Le fichier est vide.")
     if len(donnees) > taille_max:
-        raise DonneesInvalides(f"Fichier trop volumineux (maximum {taille_max // (1024 * 1024)} Mo).")
+        raise DonneesInvalides(
+            "Fichier trop volumineux (maximum {mo} Mo).", parametres={"mo": taille_max // (1024 * 1024)}
+        )
     verifier_signature(donnees, extension)
     return nom, extension
 

@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 from tpgis.client.api_client.client import ClientAPI, ErreurAPI, ErreurReseau
 from tpgis.client.theme import identite
 from tpgis.client.theme.bigarre import PanneauBigarre
+from tpgis.shared.i18n import LANGUES, langue_courante, tr
 
 
 @dataclass(frozen=True)
@@ -56,7 +57,7 @@ class DialogueConnexion(QDialog):
         self.resultat: dict | None = None
         self.comptes_demo = comptes_demo if environnement == "demonstration" else None
         ident = identite()
-        self.setWindowTitle(f"{ident.nom} : connexion sécurisée")
+        self.setWindowTitle(tr("{nom} : connexion sécurisée", nom=ident.nom))
         self.setMinimumSize(780, 460)
         racine = QHBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
@@ -70,14 +71,14 @@ class DialogueConnexion(QDialog):
         d.addStretch(3)
         logo = QLabel()
         logo.setPixmap(ident.pixmap_logo(64))
-        logo.setAccessibleName(f"Logo {ident.nom}")
+        logo.setAccessibleName(tr("Logo {nom}", nom=ident.nom))
         d.addWidget(logo)
         nom = QLabel(ident.nom)
         nom.setObjectName("nomDecor")
-        complet = QLabel(ident.nom_complet)
+        complet = QLabel(tr(ident.nom_complet))
         complet.setObjectName("texteDecor")
         complet.setWordWrap(True)
-        sous = QLabel(ident.sous_titre)
+        sous = QLabel(tr(ident.sous_titre))
         sous.setObjectName("texteDecorSecondaire")
         sous.setWordWrap(True)
         for w in (nom, complet, sous):
@@ -91,15 +92,26 @@ class DialogueConnexion(QDialog):
         couche = QVBoxLayout(panneau)
         couche.setContentsMargins(36, 32, 36, 26)
         couche.setSpacing(10)
-        titre = QLabel("Connexion sécurisée")
+        titre = QLabel(tr("Connexion sécurisée"))
         titre.setObjectName("titreConnexion")
-        couche.addWidget(titre)
-        consigne = QLabel("Accès réservé aux personnels habilités. Toute connexion est journalisée.")
+        ligne_titre = QHBoxLayout()
+        ligne_titre.addWidget(titre, 1)
+        # Choix de la langue, visible avant toute connexion (Langue / Language).
+        self.choix_langue = QComboBox()
+        self.choix_langue.setAccessibleName("Langue / Language")
+        self.choix_langue.setToolTip("Langue de l'interface / Interface language")
+        for code, nom_langue in LANGUES.items():
+            self.choix_langue.addItem(nom_langue, code)
+        self.choix_langue.setCurrentIndex(self.choix_langue.findData(langue_courante()))
+        self.choix_langue.currentIndexChanged.connect(self._changer_langue)
+        ligne_titre.addWidget(self.choix_langue, 0, Qt.AlignTop)
+        couche.addLayout(ligne_titre)
+        consigne = QLabel(tr("Accès réservé aux personnels habilités. Toute connexion est journalisée."))
         consigne.setObjectName("sousTitrePage")
         consigne.setWordWrap(True)
         couche.addWidget(consigne)
         if environnement and environnement != "production":
-            bandeau = QLabel(f"Environnement : {environnement.upper()}. Données fictives uniquement.")
+            bandeau = QLabel(tr("Environnement : {upper}. Données fictives uniquement.", upper=environnement.upper()))
             bandeau.setObjectName("avertissement")
             bandeau.setWordWrap(True)
             couche.addWidget(bandeau)
@@ -107,14 +119,14 @@ class DialogueConnexion(QDialog):
         formulaire = QFormLayout()
         formulaire.setVerticalSpacing(10)
         self.identifiant = QLineEdit()
-        self.identifiant.setPlaceholderText("identifiant")
+        self.identifiant.setPlaceholderText(tr("identifiant"))
         self.mot_de_passe = _champ_secret()
         self.code_mfa = QLineEdit()
-        self.code_mfa.setPlaceholderText("6 chiffres")
+        self.code_mfa.setPlaceholderText(tr("6 chiffres"))
         self.code_mfa.setMaxLength(6)
-        self.libelle_mfa = QLabel("Code de vérification")
-        formulaire.addRow("Identifiant", self.identifiant)
-        formulaire.addRow("Mot de passe", self.mot_de_passe)
+        self.libelle_mfa = QLabel(tr("Code de vérification"))
+        formulaire.addRow(tr("Identifiant"), self.identifiant)
+        formulaire.addRow(tr("Mot de passe"), self.mot_de_passe)
         formulaire.addRow(self.libelle_mfa, self.code_mfa)
         self.libelle_mfa.hide()
         self.code_mfa.hide()
@@ -126,14 +138,14 @@ class DialogueConnexion(QDialog):
         self.message.setWordWrap(True)
         couche.addWidget(self.message)
         couche.addStretch()
-        self.serveur = QLabel(f"Serveur : {api.url}")
+        self.serveur = QLabel(tr("Serveur : {url}", url=api.url))
         self.serveur.setObjectName("sousTitrePage")
         couche.addWidget(self.serveur)
         boutons = QHBoxLayout()
         boutons.addStretch()
-        annuler = QPushButton("Quitter")
+        annuler = QPushButton(tr("Quitter"))
         annuler.clicked.connect(self.reject)
-        self.valider = QPushButton("Se connecter")
+        self.valider = QPushButton(tr("Se connecter"))
         self.valider.setObjectName("boutonPrincipal")
         self.valider.setDefault(True)
         self.valider.clicked.connect(self.connecter)
@@ -142,16 +154,27 @@ class DialogueConnexion(QDialog):
         couche.addLayout(boutons)
         racine.addWidget(panneau, 1)
 
+    # Code de retour : la fenetre doit etre reconstruite dans la nouvelle langue.
+    CHANGEMENT_LANGUE = 2
+
+    def _changer_langue(self) -> None:
+        from tpgis.client.langue import enregistrer_langue
+
+        enregistrer_langue(self.choix_langue.currentData())
+        self.done(self.CHANGEMENT_LANGUE)
+
     def _aide_demonstration(self) -> QHBoxLayout:
         """Executable de demonstration uniquement : remplit un compte fictif et son code MFA courant."""
         ligne = QHBoxLayout()
-        ligne.addWidget(QLabel("Compte fictif"))
+        ligne.addWidget(QLabel(tr("Compte fictif")))
         self.choix_compte = QComboBox()
         for compte in self.comptes_demo:
             self.choix_compte.addItem(compte.libelle, compte)
         ligne.addWidget(self.choix_compte, 1)
-        remplir = QPushButton("Remplir")
-        remplir.setToolTip("Renseigne l'identifiant, le mot de passe et, si nécessaire, le code MFA du compte fictif")
+        remplir = QPushButton(tr("Remplir"))
+        remplir.setToolTip(
+            tr("Renseigne l'identifiant, le mot de passe et, si nécessaire, le code MFA du compte fictif")
+        )
         remplir.clicked.connect(self.remplir_compte_demo)
         ligne.addWidget(remplir)
         return ligne
@@ -169,7 +192,7 @@ class DialogueConnexion(QDialog):
     def connecter(self) -> None:
         self.message.setText("")
         if not self.identifiant.text().strip() or not self.mot_de_passe.text():
-            self.message.setText("Saisissez votre identifiant et votre mot de passe.")
+            self.message.setText(tr("Saisissez votre identifiant et votre mot de passe."))
             return
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
@@ -184,7 +207,7 @@ class DialogueConnexion(QDialog):
                 self.libelle_mfa.show()
                 self.code_mfa.show()
                 self.code_mfa.setFocus()
-                self.message.setText("Saisissez le code à 6 chiffres de votre application d'authentification.")
+                self.message.setText(tr("Saisissez le code à 6 chiffres de votre application d'authentification."))
             else:
                 self.message.setText(str(exc))
                 self.code_mfa.clear()
@@ -199,37 +222,39 @@ class DialogueChangementMotDePasse(QDialog):
     def __init__(self, api: ClientAPI, parent=None, obligatoire: bool = True):
         super().__init__(parent)
         self.api = api
-        self.setWindowTitle("Changement du mot de passe")
+        self.setWindowTitle(tr("Changement du mot de passe"))
         couche = QVBoxLayout(self)
         if obligatoire:
-            info = QLabel("Votre mot de passe doit être changé avant de poursuivre.")
+            info = QLabel(tr("Votre mot de passe doit être changé avant de poursuivre."))
             info.setObjectName("avertissement")
             couche.addWidget(info)
         regles = QLabel(
-            "Au moins 12 caractères, combinant trois types parmi : minuscules, majuscules, chiffres, "
-            "caractères spéciaux. Ne doit pas contenir votre identifiant."
+            tr(
+                "Au moins 12 caractères, combinant trois types parmi : minuscules, majuscules, chiffres, "
+                "caractères spéciaux. Ne doit pas contenir votre identifiant."
+            )
         )
         regles.setWordWrap(True)
         regles.setObjectName("sousTitrePage")
         couche.addWidget(regles)
         formulaire = QFormLayout()
         self.ancien, self.nouveau, self.confirmation = _champ_secret(), _champ_secret(), _champ_secret()
-        formulaire.addRow("Mot de passe actuel", self.ancien)
-        formulaire.addRow("Nouveau mot de passe", self.nouveau)
-        formulaire.addRow("Confirmation", self.confirmation)
+        formulaire.addRow(tr("Mot de passe actuel"), self.ancien)
+        formulaire.addRow(tr("Nouveau mot de passe"), self.nouveau)
+        formulaire.addRow(tr("Confirmation"), self.confirmation)
         couche.addLayout(formulaire)
         self.message = QLabel("")
         self.message.setObjectName("messageErreur")
         self.message.setWordWrap(True)
         couche.addWidget(self.message)
-        bouton = QPushButton("Changer le mot de passe")
+        bouton = QPushButton(tr("Changer le mot de passe"))
         bouton.setObjectName("boutonPrincipal")
         bouton.clicked.connect(self.valider)
         couche.addWidget(bouton)
 
     def valider(self) -> None:
         if self.nouveau.text() != self.confirmation.text():
-            self.message.setText("La confirmation ne correspond pas au nouveau mot de passe.")
+            self.message.setText(tr("La confirmation ne correspond pas au nouveau mot de passe."))
             return
         try:
             self.api.post(
@@ -248,14 +273,16 @@ class DialogueEnrolementMFA(QDialog):
     def __init__(self, api: ClientAPI, parent=None):
         super().__init__(parent)
         self.api = api
-        self.setWindowTitle("Activation de l'authentification multifacteur")
+        self.setWindowTitle(tr("Activation de l'authentification multifacteur"))
         self.setMinimumWidth(480)
         couche = QVBoxLayout(self)
         info = QLabel(
-            "Votre rôle impose l'authentification multifacteur.\n\n"
-            "1. Ouvrez l'application d'authentification fournie par l'institution.\n"
-            "2. Ajoutez un compte en saisissant la clé ci-dessous.\n"
-            "3. Saisissez le code à 6 chiffres affiché pour confirmer."
+            tr(
+                "Votre rôle impose l'authentification multifacteur.\n\n"
+                "1. Ouvrez l'application d'authentification fournie par l'institution.\n"
+                "2. Ajoutez un compte en saisissant la clé ci-dessous.\n"
+                "3. Saisissez le code à 6 chiffres affiché pour confirmer."
+            )
         )
         info.setWordWrap(True)
         couche.addWidget(info)
@@ -270,12 +297,12 @@ class DialogueEnrolementMFA(QDialog):
         formulaire = QFormLayout()
         self.code = QLineEdit()
         self.code.setMaxLength(6)
-        formulaire.addRow("Code de vérification", self.code)
+        formulaire.addRow(tr("Code de vérification"), self.code)
         couche.addLayout(formulaire)
         self.message = QLabel("")
         self.message.setObjectName("messageErreur")
         couche.addWidget(self.message)
-        bouton = QPushButton("Activer")
+        bouton = QPushButton(tr("Activer"))
         bouton.setObjectName("boutonPrincipal")
         bouton.clicked.connect(self.activer)
         couche.addWidget(bouton)
@@ -301,21 +328,21 @@ class DialogueReauthentification(QDialog):
     def __init__(self, api: ClientAPI, mfa: bool, parent=None):
         super().__init__(parent)
         self.api = api
-        self.setWindowTitle("Confirmation d'identité")
+        self.setWindowTitle(tr("Confirmation d'identité"))
         couche = QVBoxLayout(self)
-        couche.addWidget(QLabel("Cette opération sensible nécessite de confirmer votre identité."))
+        couche.addWidget(QLabel(tr("Cette opération sensible nécessite de confirmer votre identité.")))
         formulaire = QFormLayout()
         self.mot_de_passe = _champ_secret()
-        formulaire.addRow("Mot de passe", self.mot_de_passe)
+        formulaire.addRow(tr("Mot de passe"), self.mot_de_passe)
         self.code = QLineEdit()
         self.code.setMaxLength(6)
         if mfa:
-            formulaire.addRow("Code de vérification", self.code)
+            formulaire.addRow(tr("Code de vérification"), self.code)
         couche.addLayout(formulaire)
         self.message = QLabel("")
         self.message.setObjectName("messageErreur")
         couche.addWidget(self.message)
-        bouton = QPushButton("Confirmer")
+        bouton = QPushButton(tr("Confirmer"))
         bouton.setObjectName("boutonPrincipal")
         bouton.clicked.connect(self.valider)
         couche.addWidget(bouton)

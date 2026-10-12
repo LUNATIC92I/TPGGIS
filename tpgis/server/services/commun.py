@@ -164,15 +164,17 @@ def lire_parametre(bd: SessionBD, cle: str) -> Any:
         return ligne.valeur
     if cle in PARAMETRES_DEFAUT:
         return PARAMETRES_DEFAUT[cle]["valeur"]
-    raise DonneesInvalides(f"Paramètre inconnu : {cle}")
+    raise DonneesInvalides("Paramètre inconnu : {cle}", parametres={"cle": cle})
 
 
 def ecrire_parametre(bd: SessionBD, cle: str, valeur: Any, identifiant: str) -> Parametre:
     if cle not in PARAMETRES_DEFAUT:
-        raise DonneesInvalides(f"Paramètre inconnu : {cle}")
+        raise DonneesInvalides("Paramètre inconnu : {cle}", parametres={"cle": cle})
     attendu = type(PARAMETRES_DEFAUT[cle]["valeur"])
     if not isinstance(valeur, attendu) or (attendu is int and isinstance(valeur, bool)):
-        raise DonneesInvalides(f"Le paramètre {cle} attend une valeur de type {attendu.__name__}.")
+        raise DonneesInvalides(
+            "Le paramètre {cle} attend une valeur de type {type}.", parametres={"cle": cle, "type": attendu.__name__}
+        )
     ligne = bd.get(Parametre, cle)
     if ligne is None:
         ligne = Parametre(cle=cle, description=PARAMETRES_DEFAUT[cle]["description"])

@@ -25,6 +25,7 @@ class ConfigurationClient:
     url_tuiles: str | None = None
     attribution_tuiles: str = ""
     theme: str = "clair"
+    langue: str = "fr"
     nom_logiciel: str | None = None
     nom_complet: str | None = None
     sous_titre: str | None = None
@@ -57,6 +58,7 @@ def charger_configuration() -> ConfigurationClient:
                 config.attribution_tuiles = lecteur["carte"].get("attribution", "")
             if lecteur.has_section("affichage"):
                 config.theme = lecteur["affichage"].get("theme", config.theme).strip().lower()
+                config.langue = lecteur["affichage"].get("langue", config.langue).strip().lower() or "fr"
             if lecteur.has_section("identite"):
                 identite = lecteur["identite"]
                 config.nom_logiciel = identite.get("nom") or None
@@ -69,4 +71,5 @@ def charger_configuration() -> ConfigurationClient:
     config.autoriser_http_local = os.environ.get("TPGIS_CLIENT_HTTP_LOCAL", "") == "1"
     config.url_tuiles = os.environ.get("TPGIS_CLIENT_TUILES", config.url_tuiles)
     config.theme = os.environ.get("TPGIS_CLIENT_THEME", config.theme)
+    config.langue = os.environ.get("TPGIS_CLIENT_LANGUE", config.langue)
     return config

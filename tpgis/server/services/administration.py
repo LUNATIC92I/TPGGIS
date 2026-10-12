@@ -122,7 +122,7 @@ def _valider_permissions(permissions: list[str]) -> set[str]:
     connues = {p.value for p in Permission}
     inconnues = set(permissions) - connues
     if inconnues:
-        raise DonneesInvalides(f"Permissions inconnues : {', '.join(sorted(inconnues))}")
+        raise DonneesInvalides("Permissions inconnues : {liste}", parametres={"liste": ", ".join(sorted(inconnues))})
     return set(permissions)
 
 

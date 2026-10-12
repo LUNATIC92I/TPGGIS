@@ -113,3 +113,32 @@ def connexions(app, client, donnees) -> Connexions:
 
 
 FINALITE = "Enquete%20judiciaire%20en%20cours"
+
+
+@pytest.fixture(autouse=True)
+def _liberer_fenetres_qt():
+    """Detruit les fenetres Qt de chaque test dans le fil principal.
+
+    Sans cela, le ramasse miettes de Python peut liberer une fenetre (cycles crees
+    par les connexions de signaux) plus tard, depuis un fil d'execution du serveur
+    de test : Qt exige que ses objets graphiques soient detruits dans le fil principal.
+    """
+    yield
+    import sys
+
+    if "PySide6.QtWidgets" not in sys.modules:
+        return
+    import gc
+
+    from PySide6.QtCore import QCoreApplication, QEvent
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if app is None:
+        return
+    for fenetre in app.topLevelWidgets():
+        fenetre.close()
+        fenetre.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    gc.collect()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)

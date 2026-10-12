@@ -11,6 +11,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from tpgis.server.services.erreurs import TropDeRequetes
+from tpgis.shared.i18n import normaliser
 
 EN_TETES_SECURITE = {
     "X-Content-Type-Options": "nosniff",
@@ -43,7 +44,9 @@ class LimiteurDebit:
             if len(file) >= limite:
                 attente = int(fenetre - (instant - file[0])) + 1
                 raise TropDeRequetes(
-                    f"Trop de requêtes. Réessayez dans {attente} secondes.", details={"reessayer_apres": attente}
+                    "Trop de requêtes. Réessayez dans {attente} secondes.",
+                    details={"reessayer_apres": attente},
+                    parametres={"attente": attente},
                 )
             file.append(instant)
 
@@ -68,7 +71,11 @@ def installer(app) -> None:
         except TropDeRequetes as exc:
             return JSONResponse(
                 status_code=429,
-                content={"detail": exc.message, "code": exc.code, "trace_id": trace},
+                content={
+                    "detail": exc.message_traduit(normaliser(request.headers.get("accept-language"))),
+                    "code": exc.code,
+                    "trace_id": trace,
+                },
                 headers={"Retry-After": str(exc.details["reessayer_apres"]), **EN_TETES_SECURITE},
             )
         reponse = await suivant(request)

@@ -12,10 +12,10 @@ Plateforme institutionnelle de gestion des plaintes, des faits signalés, des pe
 |---|---|---|
 | Serveur applicatif (API sécurisée) | Python 3.12, FastAPI, SQLAlchemy 2, Pydantic 2 | `tpgis/server` |
 | Migrations de base de données | Alembic (PostgreSQL 16 en production, SQLite pour les tests) | `tpgis/server/database/migrations` |
-| Client de bureau Windows 10 et 11 | PySide6 (Qt 6), système de thèmes QSS (clair et sombre), carte vectorielle native | `tpgis/client` |
+| Client de bureau Windows 10 et 11 | PySide6 (Qt 6), interface française et anglaise, système de thèmes QSS (clair et sombre), carte vectorielle native | `tpgis/client` |
 | Éléments partagés (énumérations, permissions, schémas, données géographiques) | Python | `tpgis/shared` |
 | Données de démonstration synthétiques | Générateur reproductible | `tpgis/server/database/seed` |
-| Tests automatisés (144) | pytest | `tests` |
+| Tests automatisés (154) | pytest | `tests` |
 | Installateur Windows et exécutable de démonstration autonome | PyInstaller et Inno Setup | `deployment/windows` |
 | Déploiement serveur | systemd, nginx (TLS), nftables, PostgreSQL | `deployment/server` |
 | Documentation | Markdown | `docs` |
@@ -45,7 +45,7 @@ TPGIS_TEST_DATABASE_URL=postgresql+psycopg://... python -m pytest (PostgreSQL, b
 TPGIS_TEST_CLAMD_SOCKET=/run/clamav/clamd.ctl python -m pytest    (avec un démon ClamAV réel)
 ```
 
-Résultat de la dernière exécution (11 octobre 2026, Python 3.13, SQLite) : 143 tests réussis et 1 ignoré, le test du démon ClamAV réel n'étant exécuté que si `TPGIS_TEST_CLAMD_SOCKET` est fourni. Les campagnes précédentes sur PostgreSQL 16.15 et Python 3.12.3 portaient sur les 121 tests existant alors. Le détail figure dans [docs/fonctionnalites_testees.md](docs/fonctionnalites_testees.md).
+Résultat de la dernière exécution (12 octobre 2026, Python 3.13, SQLite) : 153 tests réussis et 1 ignoré, le test du démon ClamAV réel n'étant exécuté que si `TPGIS_TEST_CLAMD_SOCKET` est fourni. Les campagnes précédentes sur PostgreSQL 16.15 et Python 3.12.3 portaient sur les 121 tests existant alors. Le détail figure dans [docs/fonctionnalites_testees.md](docs/fonctionnalites_testees.md).
 
 ## Documentation
 
@@ -59,6 +59,7 @@ Résultat de la dernière exécution (11 octobre 2026, Python 3.13, SQLite) : 14
 | [docs/sauvegarde_restauration.md](docs/sauvegarde_restauration.md) | Sauvegardes chiffrées, restauration, reprise après incident |
 | [docs/guide_utilisateur.md](docs/guide_utilisateur.md) | Guide utilisateur du client de bureau |
 | [docs/charte_graphique.md](docs/charte_graphique.md) | Charte graphique, thèmes clair et sombre, accessibilité, identité configurable |
+| [docs/traduction.md](docs/traduction.md) | Interface bilingue français et anglais, choix de la langue, ajout de traductions |
 | [docs/performances.md](docs/performances.md) | Résultats mesurés sur volumes synthétiques |
 | [docs/fonctionnalites_testees.md](docs/fonctionnalites_testees.md) | Liste des fonctionnalités réellement testées |
 | [docs/integrations_a_valider.md](docs/integrations_a_valider.md) | Intégrations restant à valider |

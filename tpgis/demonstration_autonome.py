@@ -169,7 +169,7 @@ def comptes_demo():
         comptes.append(
             CompteDemo(
                 identifiant=identifiant,
-                libelle=f"{tr(libelle)}{'  [MFA]' if mfa else ''}",
+                libelle=libelle,
                 mot_de_passe=MOT_DE_PASSE_DEMO,
                 code_mfa=(lambda i=identifiant: code_totp_demo(i)) if mfa else None,
             )

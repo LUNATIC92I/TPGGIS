@@ -15,7 +15,7 @@ Plateforme institutionnelle de gestion des plaintes, des faits signalés, des pe
 | Client de bureau Windows 10 et 11 | PySide6 (Qt 6), interface française et anglaise, système de thèmes QSS (clair et sombre), carte vectorielle native | `tpgis/client` |
 | Éléments partagés (énumérations, permissions, schémas, données géographiques) | Python | `tpgis/shared` |
 | Données de démonstration synthétiques | Générateur reproductible | `tpgis/server/database/seed` |
-| Tests automatisés (154) | pytest | `tests` |
+| Tests automatisés (155) | pytest | `tests` |
 | Installateur Windows et exécutable de démonstration autonome | PyInstaller et Inno Setup | `deployment/windows` |
 | Déploiement serveur | systemd, nginx (TLS), nftables, PostgreSQL | `deployment/server` |
 | Documentation | Markdown | `docs` |
@@ -45,7 +45,7 @@ TPGIS_TEST_DATABASE_URL=postgresql+psycopg://... python -m pytest (PostgreSQL, b
 TPGIS_TEST_CLAMD_SOCKET=/run/clamav/clamd.ctl python -m pytest    (avec un démon ClamAV réel)
 ```
 
-Résultat de la dernière exécution (12 octobre 2026, Python 3.13, SQLite) : 153 tests réussis et 1 ignoré, le test du démon ClamAV réel n'étant exécuté que si `TPGIS_TEST_CLAMD_SOCKET` est fourni. Les campagnes précédentes sur PostgreSQL 16.15 et Python 3.12.3 portaient sur les 121 tests existant alors. Le détail figure dans [docs/fonctionnalites_testees.md](docs/fonctionnalites_testees.md).
+Résultat de la dernière exécution (12 octobre 2026, Python 3.13, SQLite) : 154 tests réussis et 1 ignoré, le test du démon ClamAV réel n'étant exécuté que si `TPGIS_TEST_CLAMD_SOCKET` est fourni. Les campagnes précédentes sur PostgreSQL 16.15 et Python 3.12.3 portaient sur les 121 tests existant alors. Le détail figure dans [docs/fonctionnalites_testees.md](docs/fonctionnalites_testees.md).
 
 ## Documentation
 

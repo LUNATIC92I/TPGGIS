@@ -169,7 +169,8 @@ class DialogueConnexion(QDialog):
         ligne.addWidget(QLabel(tr("Compte fictif")))
         self.choix_compte = QComboBox()
         for compte in self.comptes_demo:
-            self.choix_compte.addItem(compte.libelle, compte)
+            # Libelle source traduit ici, dans la langue courante de la fenetre.
+            self.choix_compte.addItem(f"{tr(compte.libelle)}{'  [MFA]' if compte.code_mfa else ''}", compte)
         ligne.addWidget(self.choix_compte, 1)
         remplir = QPushButton(tr("Remplir"))
         remplir.setToolTip(

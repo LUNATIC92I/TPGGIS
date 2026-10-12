@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSettings, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QSettings, QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QStackedWidget,
     QStatusBar,
     QVBoxLayout,
@@ -51,18 +52,51 @@ MODULES = [
 
 
 class DefilementHorizontal(QScrollArea):
-    """Defilement horizontal uniquement : la hauteur minimale des pages reste imposee a la fenetre
-    (les tableaux defilent eux memes), seule une largeur insuffisante fait apparaitre une barre."""
+    """Defilement horizontal uniquement, pour les polices agrandies ou les mises a l'echelle extremes.
+
+    La hauteur des pages suit la zone visible (comme sans defilement, les tableaux
+    defilent eux memes) ; seule une largeur insuffisante pour la page courante fait
+    apparaitre une barre horizontale, au lieu de boutons tronques.
+    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setWidgetResizable(False)
+
+    def setWidget(self, widget):  # noqa: N802
+        super().setWidget(widget)
+        widget.installEventFilter(self)
+        if hasattr(widget, "currentChanged"):
+            widget.currentChanged.connect(lambda _i: self.ajuster())
+
+    def _largeur_minimale(self) -> int:
+        pile = self.widget()
+        page = pile.currentWidget() if hasattr(pile, "currentWidget") else pile
+        return page.minimumSizeHint().width() if page is not None else 0
+
+    def ajuster(self) -> None:
+        pile = self.widget()
+        if pile is None:
+            return
+        visible = self.viewport().size()
+        pile.resize(max(visible.width(), self._largeur_minimale()), visible.height())
 
     def minimumSizeHint(self):  # noqa: N802
         taille = super().minimumSizeHint()
-        if self.widget() is not None:
-            taille.setHeight(self.widget().minimumSizeHint().height())
+        if self.widget() is not None and self.widget().layout() is not None:
+            # Meme hauteur minimale qu'en l'absence de zone defilante.
+            taille.setHeight(self.widget().layout().minimumSize().height())
         return taille
+
+    def resizeEvent(self, event):  # noqa: N802
+        super().resizeEvent(event)
+        self.ajuster()
+
+    def eventFilter(self, objet, event):  # noqa: N802
+        if objet is self.widget() and event.type() == QEvent.LayoutRequest:
+            self.ajuster()
+        return super().eventFilter(objet, event)
 
 
 class FenetrePrincipale(QMainWindow):
@@ -95,7 +129,6 @@ class FenetrePrincipale(QMainWindow):
         self.defilement = DefilementHorizontal()
         self.defilement.setObjectName("defilementPages")
         self.defilement.setWidget(self.pages)
-        self.defilement.setWidgetResizable(True)
         self.defilement.setFrameShape(QFrame.NoFrame)
         corps.addWidget(self.navigation)
         corps.addWidget(self.defilement, 1)
@@ -152,7 +185,11 @@ class FenetrePrincipale(QMainWindow):
             )
         )
         info.setObjectName("infoUtilisateur")
-        h.addWidget(info)
+        # Texte complet en info bulle : il peut etre raccourci a la largeur minimale de la fenetre.
+        info.setToolTip(info.text())
+        info.setMinimumWidth(0)
+        info.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        h.addWidget(info, 1)
         self.bouton_theme = QPushButton()
         self.bouton_theme.clicked.connect(self.basculer_theme)
         h.addWidget(self.bouton_theme)

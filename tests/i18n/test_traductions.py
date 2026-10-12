@@ -222,3 +222,15 @@ def test_bascule_de_langue_depuis_le_bandeau(qapp_anglais, client, connexions):
     assert reconstruite.navigation.item(0).text() == "Tableau de bord"
     assert reconstruite.bouton_langue.text() == "English"
     reconstruite.close()
+
+
+def test_comptes_de_demonstration_dans_la_langue_courante(qapp_anglais, client, donnees):
+    from tpgis import demonstration_autonome as demo
+    from tpgis.client.windows.connexion import DialogueConnexion
+
+    comptes = demo.comptes_demo()  # construits une seule fois, au lancement
+    dialogue = DialogueConnexion(ClientAPI("http://testserver", http=client), "demonstration", comptes_demo=comptes)
+    assert dialogue.choix_compte.itemText(0) == "Unit manager, N'Djamena (all modules of the unit)  [MFA]"
+    i18n.definir_langue("fr")
+    dialogue = DialogueConnexion(ClientAPI("http://testserver", http=client), "demonstration", comptes_demo=comptes)
+    assert dialogue.choix_compte.itemText(0).startswith("Responsable d'unité")

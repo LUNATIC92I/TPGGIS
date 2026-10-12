@@ -45,7 +45,7 @@ class GraphiqueColonnes(_Graphique):
     def __init__(self, titre: str, parent=None):
         super().__init__(parent)
         self.titre, self.donnees = titre, []
-        self.setMinimumHeight(200)
+        self.setMinimumHeight(150)
 
     def definir(self, donnees: list[tuple[str, float]]) -> None:
         self.donnees = donnees
@@ -93,7 +93,7 @@ class GraphiqueBarres(_Graphique):
     def __init__(self, titre: str, parent=None, maximum_lignes: int = 8):
         super().__init__(parent)
         self.titre, self.donnees, self.maximum_lignes = titre, [], maximum_lignes
-        self.setMinimumHeight(200)
+        self.setMinimumHeight(150)
 
     def definir(self, donnees: list[tuple[str, float]]) -> None:
         self.donnees = donnees[: self.maximum_lignes]

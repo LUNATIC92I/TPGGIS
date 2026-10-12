@@ -6,7 +6,7 @@ Ce document distingue ce qui a été **exécuté et vérifié** de ce qui ne l'a
 
 | Campagne | Environnement | Résultat |
 |---|---|---|
-| Suite complète sur SQLite, après l'interface bilingue (12 octobre 2026) | Python 3.13.16, Linux | 153 tests réussis, 1 ignoré (démon ClamAV réel non fourni pour cette exécution) |
+| Suite complète sur SQLite, après l'interface bilingue (12 octobre 2026) | Python 3.13.16, Linux | 154 tests réussis, 1 ignoré (démon ClamAV réel non fourni pour cette exécution) |
 | Suite complète sur SQLite | Python 3.13.16, Linux | 121 tests réussis (avec démon ClamAV réel) |
 | Suite complète sur PostgreSQL 16.15 | Python 3.13.16, Linux | 121 tests réussis |
 | Suite complète sur SQLite, dépendances verrouillées | Python 3.12.3, Linux | 121 tests réussis |
@@ -117,6 +117,8 @@ Banc d'essai identique au paragraphe 6 (Wine 9, Python 3.12.10 pour Windows, PyI
 | Lancement suivant | Écran de connexion affiché après 13 secondes, données conservées |
 | Connexion assistée (`responsable.ndj`, bouton « Remplir » puis « Se connecter ») | Code MFA courant renseigné, connexion acceptée, tableau de bord, carte et mentions « Chiffres fictifs » affichés |
 | « Se déconnecter » puis « Quitter » | Serveur local arrêté (journal `demonstration.log`), processus terminés 6 secondes après « Quitter » |
+
+Interface bilingue, vérifiée sur l'exécutable reconstruit (12 octobre 2026) : choix « English » sur l'écran de connexion, libellés des comptes fictifs traduits, connexion et tableau de bord en anglais à la taille minimale de la fenêtre, langue mémorisée au lancement suivant, bascule vers le français depuis le bandeau sans nouvelle connexion (nombre de connexions inchangé dans le journal du serveur), puis déconnexion et arrêt des processus 6 secondes après « Quitter ».
 
 Tests automatisés associés : `tests/client/test_demonstration_autonome.py` (serveur local TLS limité à 127.0.0.1, connexion assistée avec MFA, aide absente hors démonstration).
 
